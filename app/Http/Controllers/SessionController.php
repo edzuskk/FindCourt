@@ -33,4 +33,9 @@ class SessionController extends Controller
             "email" => "Nepareiz e-pasts vai parole"
           ]);
     }
+    public function show()
+    {
+        $user = auth()->user();
+        return view('profile.view', compact('user'));
+    }
 }

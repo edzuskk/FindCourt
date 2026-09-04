@@ -1,10 +1,9 @@
 <?php
 
+use App\Http\Controllers\MarkerController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('map');
-});
+Route::get('/', [App\Http\Controllers\MarkerController::class, 'index'])->name('map');
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [App\Http\Controllers\RegisterController::class, 'create'])->name('register');
@@ -14,7 +13,10 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/profile', [App\Http\Controllers\SessionController::class, 'show'])->name('profile.view');
     Route::post('/logout', [App\Http\Controllers\SessionController::class, 'destroy'])->name('logout');
 });
 
-Route::get('/create', [App\Http\Controllers\MarkerController::class, 'create'])->name('marker.create');
+Route::get('/map', [App\Http\Controllers\MarkerController::class, 'index'])->name('map.page');
+Route::get('/courts', [App\Http\Controllers\MarkerController::class, 'index'])->name('courts.index');
+Route::post('/courts', [App\Http\Controllers\MarkerController::class, 'store'])->name('courts.store');

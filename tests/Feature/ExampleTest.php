@@ -16,4 +16,14 @@ class ExampleTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_map_page_renders_a_valid_sidebar(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertSee('id="sidebar"', false);
+        $response->assertSee('function showSidebar', false);
+        $response->assertSee('function closeSidebar', false);
+    }
 }
