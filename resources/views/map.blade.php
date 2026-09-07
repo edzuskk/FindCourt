@@ -53,10 +53,19 @@
                 <p class="court-coordinates"><strong>Coordinates:</strong> ${court.latitude}, ${court.longitude}</p>
                 <p class="court-rating"><strong>⭐Rating:</strong> ${court.rating || 'No rating'}</p>
                 <p class="court-likes"><strong>👍Likes:</strong> ${court.likes || 0}</p>
-                <p class="court-description"><strong>User comments:</strong> ${court.description || 'No description yet.'}</p>
+                <p class="court-dislikes"><strong>👎Dislikes:</strong> ${court.dislikes || 0}</p>
+                <p class="court-comments-header"><strong>💬Comments:</strong></p>
+                <p class="court-description">:<strong></strong> ${court.description || 'No description yet.'}</p>
             `;
             return card;    
         }
+
+        const courtIcon = L.icon({
+            iconUrl: '/images/basketball-marker.png',
+            iconSize: [40, 40],
+            iconAnchor: [20, 40],
+            popupAnchor: [0, -40]
+        });
 
         function loadCourts() {
             fetch('/courts')
@@ -72,7 +81,11 @@
                     });
 
                     courts.forEach(court => {
-                        const marker = L.marker([court.latitude, court.longitude]).addTo(map);
+                        const marker = L.marker(
+                            [court.latitude, court.longitude],
+                            { icon: courtIcon }
+                        ).addTo(map);
+
                         marker.on('click', (event) => {
                             L.DomEvent.stopPropagation(event);
                             showSidebar('Court details', buildCourtCard(court));
@@ -92,7 +105,10 @@
 
             const latitude = event.latlng.lat;
             const longitude = event.latlng.lng;
-            const marker = L.marker([latitude, longitude]).addTo(map);
+            const marker = L.marker(
+                [latitude, longitude],
+                { icon: courtIcon }
+            ).addTo(map);
 
             const popupContent = document.createElement('div');
             popupContent.innerHTML = 'Save this court?<br>';
