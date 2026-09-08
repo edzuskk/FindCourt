@@ -9,13 +9,30 @@
         <div id="sidebarContent" class="sidebar-body"></div>
     </aside>
 
-    
+    @if(auth()->check())
+        <script>
+            const canAddCourt = true;
+        </script>
+        @else
+        <script>
+            const canAddCourt = false;
+        </script>
+    @endif
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+        const mapBounds = L.latLngBounds(
+            [55.65, 20.65],
+            [58.10, 28.25]
+        );
+
         const map = L.map('map', {
-            zoomControl: false
+            zoomControl: false,
+            maxBounds: mapBounds,
+            maxBoundsViscosity: 1.0,
+            minZoom: 7,
+            maxZoom: 19
         }).setView([56.9630576312498, 24.810031163689104], 8.1);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -43,21 +60,248 @@
             sidebarContent.innerHTML = '';
         }
 
+        function buildCourtForm(latitude, longitude) {
+        const form = document.createElement('form');
+
+        form.innerHTML = `
+                @csrf
+                <div class="form-group">
+                    <label for="courtName">Court name</label>
+                    <input type="text" id="courtName" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="courtAddress">Address</label>
+                    <input type="text" id="courtAddress" name="address">
+                </div>
+
+                <div class="form-group">
+                    <label for="courtCity">City</label>
+                    <input type="text" id="courtCity" name="city">
+                </div>
+
+                <div class="form-group">
+                    <label for="courtState">State</label>
+                    <input type="text" id="courtState" name="state">
+                </div>
+
+                <div class="form-group">
+                    <label for="courtPhoto">Photo URL</label>
+                    <input type="url" id="courtPhoto" name="photo" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label for="courtDescription">Description</label>
+                    <textarea id="courtDescription" name="description"></textarea>
+                </div>
+
+                <p>
+                    <strong>Latitude:</strong> ${latitude}
+                </p>
+
+                <p>
+                    <strong>Longitude:</strong> ${longitude}
+                </p>
+
+                <button type="submit">Save court</button>
+            `;
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const name = form.querySelector('#courtName').value;
+                const address = form.querySelector('#courtAddress').value;
+                const city = form.querySelector('#courtCity').value;
+                const state = form.querySelector('#courtState').value;
+                const photo = form.querySelector('#courtPhoto').value;
+                const description = form.querySelector('#courtDescription').value;
+
+                fetch('/courts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        address: address,
+                        city: city,
+                        state: state,
+                        photo: photo,
+                        description: description,
+                        latitude: latitude,
+                        longitude: longitude
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server error: ' + response.status);
+                    }
+
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        closeSidebar();
+                        loadCourts();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving court:', error);
+                });
+            });
+
+            return form;
+        }
+
+        function buildReviewForm(courtId) {
+            const form = document.createElement('form');
+            form.innerHTML = `
+                @csrf
+                <div class="form-group">
+                    <label for="reviewRating">Rating (1-5)</label>
+                    <select id="reviewRating" name="rating">
+                        <option value="">No rating</option>
+                        <option value="5">5 - Excellent</option>
+                        <option value="4">4 - Good</option>
+                        <option value="3">3 - Average</option>
+                        <option value="2">2 - Poor</option>
+                        <option value="1">1 - Very poor</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reviewPhoto">Photo URL</label>
+                    <input type="url" id="reviewPhoto" name="photo" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label for="reviewComment">Comment</label>
+                    <textarea id="reviewComment" name="comment" placeholder="Share your experience..."></textarea>
+                </div>
+
+                <button type="submit">Post review</button>
+            `;
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const rating = form.querySelector('#reviewRating').value;
+                const photo = form.querySelector('#reviewPhoto').value;
+                const comment = form.querySelector('#reviewComment').value;
+
+                fetch(`/courts/${courtId}/reviews`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        rating: rating ? Number(rating) : null,
+                        photo: photo || null,
+                        comment: comment || null,
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server error: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        loadCourts();
+                        showSidebar('Court details', buildCourtCard(courtId));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error adding review:', error);
+                });
+            });
+
+            return form;
+        }
+
         function buildCourtCard(court) {
             const card = document.createElement('div');
             card.className = 'court-card';
+
+            const reviews = Array.isArray(court.reviews) ? court.reviews : [];
+            const totalReviews = reviews.length;
+            const averageRating = court.avg_rating ?? (reviews.length ? (reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length) : 0);
+
+            let reviewMarkup = '';
+            if (reviews.length === 0) {
+                reviewMarkup = '<p>No comments yet.</p>';
+            } else {
+                reviewMarkup = reviews.map(review => `
+                    <div class="review-item">
+                        <strong>${review.username || 'Anonymous'}</strong>
+                        <div>⭐ ${review.rating || 'No rating'}</div>
+                        ${review.photo ? `<img src="${review.photo}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
+                        <p>${review.comment || 'No comment provided.'}</p>
+                    </div>
+                `).join('');
+            }
+
             card.innerHTML = `
                 <h3>${court.name || 'Untitled Court'}</h3>
+                ${court.photo ? `<img src="${court.photo}" alt="Court photo" style="max-width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
                 <p class="court-address"><strong>📍Address:</strong> ${court.address || 'Not added'}</p>
                 <p class="court-city"><strong>🏙️City:</strong> ${court.city || 'Not added'}</p>
                 <p class="court-coordinates"><strong>Coordinates:</strong> ${court.latitude}, ${court.longitude}</p>
-                <p class="court-rating"><strong>⭐Rating:</strong> ${court.rating || 'No rating'}</p>
-                <p class="court-likes"><strong>👍Likes:</strong> ${court.likes || 0}</p>
-                <p class="court-dislikes"><strong>👎Dislikes:</strong> ${court.dislikes || 0}</p>
-                <p class="court-comments-header"><strong>💬Comments:</strong></p>
-                <p class="court-description">:<strong></strong> ${court.description || 'No description yet.'}</p>
+                <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating ? averageRating.toFixed(1) : 'No rating'}${averageRating ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p>
+                <div class="court-actions">
+                    <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="like">👍 Like (${court.likes || 0})</button>
+                    <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="dislike">👎 Dislike (${court.dislikes || 0})</button>
+                </div>
+                <p class="court-description"><strong>📝Description:</strong> ${court.description || 'No description yet.'}</p>
+                <div class="court-comments-header"><strong>💬Comments:</strong></div>
+                <div class="court-comments">${reviewMarkup}</div>
+                <div class="court-review-form-wrap"></div>
             `;
-            return card;    
+
+            const reviewFormWrap = card.querySelector('.court-review-form-wrap');
+            const reactionButtons = card.querySelectorAll('.reaction-btn');
+            reactionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (!canAddCourt) {
+                        alert('Please log in to react to a court.');
+                        return;
+                    }
+                    const reaction = button.dataset.reaction;
+                    fetch(`/courts/${court.id}/react`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ reaction })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Server error: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(() => {
+                        loadCourts();
+                        showSidebar('Court details', buildCourtCard(court));
+                    })
+                    .catch(error => {
+                        console.error('Error reacting:', error);
+                    });
+                });
+            });
+
+            if (canAddCourt) {
+                reviewFormWrap.appendChild(buildReviewForm(court.id));
+            }
+
+            return card;
         }
 
         const courtIcon = L.icon({
@@ -99,6 +343,9 @@
         }
 
         map.on('click', function (event) {
+            if (!canAddCourt) {
+                return;
+            }
             if (event.originalEvent && event.originalEvent.target && event.originalEvent.target.closest && event.originalEvent.target.closest('.leaflet-marker-icon')) {
                 return;
             }
@@ -112,29 +359,19 @@
 
             const popupContent = document.createElement('div');
             popupContent.innerHTML = 'Save this court?<br>';
-
             const yesLink = document.createElement('a');
             yesLink.href = '#';
             yesLink.textContent = 'Yes';
             yesLink.onclick = function (e) {
                 e.preventDefault();
-                fetch('/courts', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                    },
-                    body: JSON.stringify({ latitude, longitude })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        marker.closePopup();
-                        closeSidebar();
-                        loadCourts();
-                    }
-                })
-                .catch(error => console.error('Error saving court:', error));
+
+                marker.closePopup();
+
+                showSidebar(
+                    'Add basketball court',
+                    buildCourtForm(latitude, longitude)
+                );
+
                 return false;
             };
 

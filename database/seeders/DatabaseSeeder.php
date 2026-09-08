@@ -21,13 +21,13 @@ class DatabaseSeeder extends Seeder
             'username' => 'Admin',
             'email' => 'admin@admin.com',
             'password' => 'Admin123$',
-            'role' => 'Admin',
+            'is_admin' => true,
         ]);
         User::factory()->create([
             'username' => 'User',
             'email' => 'user@user.com',
             'password' => 'User123$',
-            'role' => 'User',
+            'is_admin' => false,
         ]);
     }
 }

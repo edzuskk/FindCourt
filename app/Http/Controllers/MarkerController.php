@@ -9,9 +9,13 @@ class MarkerController extends Controller
 {
     public function index(Request $request)
     {
-        $courts = Court::all();
+        $courts = Court::with('reviews.user')->get();
 
-        // Return JSON for API requests
+        $courts->transform(function ($court) {
+            $court->avg_rating = $court->reviews->avg('rating') ?: 0;
+            return $court;
+        });
+
         if ($request->expectsJson() || $request->is('courts')) {
             return response()->json($courts);
         }
@@ -30,6 +34,7 @@ class MarkerController extends Controller
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'description' => ['nullable', 'string'],
             'likes' => ['nullable', 'integer', 'min:0'],
+            'dislikes' => ['nullable', 'integer', 'min:0'],
             'latitude' => ['required', 'numeric'],
             'longitude' => ['required', 'numeric'],
         ]);
@@ -41,9 +46,5 @@ class MarkerController extends Controller
             'court' => $court,
         ]);
 
-    }
-    public function users()
-    {
-        return view('users');
     }
 }
