@@ -30,7 +30,7 @@ class MarkerController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
-            'photo' => ['nullable', 'string', 'max:255'],
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'description' => ['nullable', 'string'],
             'likes' => ['nullable', 'integer', 'min:0'],
@@ -38,6 +38,10 @@ class MarkerController extends Controller
             'latitude' => ['required', 'numeric'],
             'longitude' => ['required', 'numeric'],
         ]);
+
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('courts', 'public');
+        }
 
         $court = Court::create($validated);
 

@@ -9,18 +9,9 @@
         <div id="sidebarContent" class="sidebar-body"></div>
     </aside>
 
-    @if(auth()->check())
-        <script>
-            const canAddCourt = true;
-        </script>
-        @else
-        <script>
-            const canAddCourt = false;
-        </script>
-    @endif
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        const canAddCourt = @json(auth()->check());
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
         const mapBounds = L.latLngBounds(
             [55.65, 20.65],
@@ -60,6 +51,41 @@
             sidebarContent.innerHTML = '';
         }
 
+        function resolvePhotoUrl(photo) {
+            if (!photo) return '';
+            if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:') || photo.startsWith('/')) {
+                return photo;
+            }
+
+            return `/storage/${photo}`;
+        }
+
+        function bindImagePreview(form, inputSelector, previewSelector) {
+            const input = form.querySelector(inputSelector);
+            const preview = form.querySelector(previewSelector);
+
+            if (!input || !preview) {
+                return;
+            }
+
+            input.addEventListener('change', function () {
+                const file = this.files && this.files[0];
+
+                if (!file) {
+                    preview.style.display = 'none';
+                    preview.removeAttribute('src');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    preview.src = event.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         function buildCourtForm(latitude, longitude) {
         const form = document.createElement('form');
 
@@ -86,8 +112,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="courtPhoto">Photo URL</label>
-                    <input type="url" id="courtPhoto" name="photo" placeholder="https://...">
+                    <label for="courtPhoto">Photo</label>
+                    <input type="file" id="courtPhoto" name="photo" accept="image/jpeg, image/png, image/jpg">
+                </div>
+
+                <div class="form-group">
+                    <label for="courtPhotoPreview">Preview</label>
+                    <img id="courtPhotoPreview" alt="Court photo preview" style="display:none; max-width:100%; border-radius:12px; border:1px solid #d7ddd8; margin-top:4px;">
                 </div>
 
                 <div class="form-group">
@@ -113,26 +144,29 @@
                 const address = form.querySelector('#courtAddress').value;
                 const city = form.querySelector('#courtCity').value;
                 const state = form.querySelector('#courtState').value;
-                const photo = form.querySelector('#courtPhoto').value;
                 const description = form.querySelector('#courtDescription').value;
+                const photoInput = form.querySelector('#courtPhoto');
+
+                const formData = new FormData();
+                formData.append('name', name || '');
+                formData.append('address', address || '');
+                formData.append('city', city || '');
+                formData.append('state', state || '');
+                formData.append('description', description || '');
+                formData.append('latitude', String(latitude));
+                formData.append('longitude', String(longitude));
+
+                if (photoInput && photoInput.files && photoInput.files.length > 0) {
+                    formData.append('photo', photoInput.files[0]);
+                }
 
                 fetch('/courts', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        name: name,
-                        address: address,
-                        city: city,
-                        state: state,
-                        photo: photo,
-                        description: description,
-                        latitude: latitude,
-                        longitude: longitude
-                    })
+                    body: formData
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -151,6 +185,8 @@
                     console.error('Error saving court:', error);
                 });
             });
+
+            bindImagePreview(form, '#courtPhoto', '#courtPhotoPreview');
 
             return form;
         }
@@ -172,8 +208,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="reviewPhoto">Photo URL</label>
-                    <input type="url" id="reviewPhoto" name="photo" placeholder="https://...">
+                    <label for="reviewPhoto">Photo</label>
+                    <input type="file" id="reviewPhoto" name="photo" accept="image/*">
+                </div>
+
+                <div class="form-group">
+                    <label for="reviewPhotoPreview">Preview</label>
+                    <img id="reviewPhotoPreview" alt="Review photo preview" style="display:none; max-width:100%; border-radius:12px; border:1px solid #d7ddd8; margin-top:4px;">
                 </div>
 
                 <div class="form-group">
@@ -188,21 +229,25 @@
                 event.preventDefault();
 
                 const rating = form.querySelector('#reviewRating').value;
-                const photo = form.querySelector('#reviewPhoto').value;
+                const photoInput = form.querySelector('#reviewPhoto');
                 const comment = form.querySelector('#reviewComment').value;
+
+                const formData = new FormData();
+
+                formData.append('rating', rating || '');
+                formData.append('comment', comment || '');
+
+                if (photoInput && photoInput.files && photoInput.files.length > 0) {
+                    formData.append('photo', photoInput.files[0]);
+                }
 
                 fetch(`/courts/${courtId}/reviews`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({
-                        rating: rating ? Number(rating) : null,
-                        photo: photo || null,
-                        comment: comment || null,
-                    })
+                    body: formData
                 })
                 .then(response => {
                     if (!response.ok) {
@@ -213,13 +258,15 @@
                 .then(data => {
                     if (data.success) {
                         loadCourts();
-                        showSidebar('Court details', buildCourtCard(courtId));
+                        showSidebar('Court details', buildCourtCard(data.court));
                     }
                 })
                 .catch(error => {
-                    console.error('Error adding review:', error);
+                    console.error('Error posting review:', error);
                 });
             });
+
+            bindImagePreview(form, '#reviewPhoto', '#reviewPhotoPreview');
 
             return form;
         }
@@ -240,7 +287,7 @@
                     <div class="review-item">
                         <strong>${review.username || 'Anonymous'}</strong>
                         <div>⭐ ${review.rating || 'No rating'}</div>
-                        ${review.photo ? `<img src="${review.photo}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
+                        ${review.photo ? `<img src="${resolvePhotoUrl(review.photo)}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
                         <p>${review.comment || 'No comment provided.'}</p>
                     </div>
                 `).join('');
@@ -248,7 +295,7 @@
 
             card.innerHTML = `
                 <h3>${court.name || 'Untitled Court'}</h3>
-                ${court.photo ? `<img src="${court.photo}" alt="Court photo" style="max-width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
+                ${court.photo ? `<img src="${resolvePhotoUrl(court.photo)}" alt="Court photo" style="max-width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
                 <p class="court-address"><strong>📍Address:</strong> ${court.address || 'Not added'}</p>
                 <p class="court-city"><strong>🏙️City:</strong> ${court.city || 'Not added'}</p>
                 <p class="court-coordinates"><strong>Coordinates:</strong> ${court.latitude}, ${court.longitude}</p>
@@ -268,7 +315,7 @@
             reactionButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     if (!canAddCourt) {
-                        alert('Please log in to react to a court.');
+                        alert('Please log in or register to react to a court.');
                         return;
                     }
                     const reaction = button.dataset.reaction;
@@ -394,4 +441,3 @@
         loadCourts();
     </script>
 </x-layout>
-

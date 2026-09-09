@@ -39,10 +39,14 @@ class CourtReviewController extends Controller
         $validated = $request->validate([
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:2000'],
-            'photo' => ['nullable', 'string', 'max:255'],
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
         $user = Auth::user();
+
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('reviews', 'public');
+        }
 
         $review = CourtReview::create([
             'court_id' => $court->id,
