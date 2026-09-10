@@ -842,3 +842,71 @@ nav {
 .profile-field span {
     color: var(--ink-500);
 }
+
+.profile-picture {
+    width: auto;
+    height: 120px;
+    border-radius: 50%;
+}
+
+.court-photo{
+    width: 200px;
+    height: 200px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+.court-search-wrapper {
+    position: absolute;
+    top: 90px;
+    left: 16px;
+    right: 16px;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.court-search-wrapper input {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px 12px;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+#map {
+    position: relative;
+    z-index: 1;
+}
+.delete-court-btn{
+    cursor: pointer;
+    color: black;
+    background-color: red;
+    border: none;
+    height: 30px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+.delete-court-btn {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+    color: #fff;
+}
+
+.edit-court-btn{
+    cursor: pointer;
+    color: black;
+    border: none;
+    height: 30px;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+.edit-court-btn {
+    background: linear-gradient(135deg, #131cbd, #780ac7);
+    color: #fff;
+}

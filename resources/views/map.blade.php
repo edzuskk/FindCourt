@@ -1,4 +1,11 @@
 <x-layout>
+        <div class="court-search-wrapper">
+        <input
+            id="courtSearch"
+            type="text"
+            placeholder="Search courts...">
+        </div>
+
     <div id="map"></div>
 
     <aside id="sidebar" class="sidebar" aria-label="Court sidebar">
@@ -14,7 +21,7 @@
         const canAddCourt = @json(auth()->check());
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
         const mapBounds = L.latLngBounds(
-            [55.65, 20.65],
+            [56.20, 21],
             [58.10, 28.25]
         );
 
@@ -30,6 +37,31 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19,
         }).addTo(map);
+        
+        const courtSearch = document.getElementById('courtSearch');
+        let allCourts = [];
+
+        courtSearch.addEventListener('input', function () {
+            const term = this.value.trim().toLowerCase();
+
+            if (!allCourts.length) return;
+
+            const filteredCourts = term === ''
+                ? allCourts
+                : allCourts.filter(court => {
+                    const searchable = [
+                        court.name,
+                        court.address,
+                        court.city,
+                        court.state,
+                        court.description
+                    ].filter(Boolean).join(' ').toLowerCase();
+
+                    return searchable.includes(term);
+                });
+
+            renderCourts(filteredCourts);
+        });
 
         const sidebar = document.getElementById('sidebar');
         const sidebarTitle = document.getElementById('sidebarTitle');
@@ -98,17 +130,17 @@
 
                 <div class="form-group">
                     <label for="courtAddress">Address</label>
-                    <input type="text" id="courtAddress" name="address">
+                    <input type="text" id="courtAddress" name="address" required>
                 </div>
 
                 <div class="form-group">
                     <label for="courtCity">City</label>
-                    <input type="text" id="courtCity" name="city">
+                    <input type="text" id="courtCity" name="city" required>
                 </div>
 
                 <div class="form-group">
                     <label for="courtState">State</label>
-                    <input type="text" id="courtState" name="state">
+                    <input type="text" id="courtState" name="state" required>
                 </div>
 
                 <div class="form-group">
@@ -123,7 +155,7 @@
 
                 <div class="form-group">
                     <label for="courtDescription">Description</label>
-                    <textarea id="courtDescription" name="description"></textarea>
+                    <textarea id="courtDescription" name="description" required ></textarea>
                 </div>
 
                 <p>
@@ -187,6 +219,102 @@
             });
 
             bindImagePreview(form, '#courtPhoto', '#courtPhotoPreview');
+
+            return form;
+        }
+
+        function editCourt(court){
+            const form = document.createElement('form');
+            form.innerHTML = `
+                @csrf
+                @method('PUT')
+                <div class="form-group">
+                    <label for="editCourtName">Court name</label>
+                    <input type="text" id="editCourtName" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editCourtAddress">Address</label>
+                    <input type="text" id="editCourtAddress" name="address" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editCourtCity">City</label>
+                    <input type="text" id="editCourtCity" name="city" required>
+                    
+                </div>
+
+                <div class="form-group">
+                    <label for="editCourtState">State</label>
+                    <input type="text" id="editCourtState" name="state" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="courtPhoto">Photo</label>
+                    <input type="file" id="courtPhoto" name="photo" accept="image/jpeg, image/png, image/jpg">
+                </div>
+
+                <div class="form-group">
+                    <label for="editCourtDescription">Description</label>
+                    <textarea id="editCourtDescription" name="description" required></textarea>
+                </div>
+
+                <button type="submit">Update court</button>
+            `;
+
+            form.querySelector('#editCourtName').value = court.name || '';
+            form.querySelector('#editCourtAddress').value = court.address || '';
+            form.querySelector('#editCourtCity').value = court.city || '';
+            form.querySelector('#editCourtState').value = court.state || '';
+            form.querySelector('#editCourtDescription').value = court.description || '';
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const name = form.querySelector('#editCourtName').value;
+                const address = form.querySelector('#editCourtAddress').value;
+                const city = form.querySelector('#editCourtCity').value;
+                const state = form.querySelector('#editCourtState').value;
+                const description = form.querySelector('#editCourtDescription').value;
+                const photoInput = form.querySelector('#courtPhoto');
+
+
+                const formData = new FormData();
+                formData.append('name', name || '');
+                formData.append('address', address || '');
+                formData.append('city', city || '');
+                formData.append('state', state || '');
+                formData.append('description', description || '');
+
+                if (photoInput && photoInput.files && photoInput.files.length > 0) {
+                    formData.append('photo', photoInput.files[0]);
+                }
+
+                fetch(`/courts/${court.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server error: ' + response.status);
+                    }
+
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        closeSidebar();
+                        loadCourts();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating court:', error);
+                });
+            });
 
             return form;
         }
@@ -258,7 +386,27 @@
                 .then(data => {
                     if (data.success) {
                         loadCourts();
-                        showSidebar('Court details', buildCourtCard(data.court));
+
+                        fetch(`/courts/${courtId}/reviews`)
+                            .then(reviewResponse => {
+                                if (!reviewResponse.ok) {
+                                    throw new Error('Server error: ' + reviewResponse.status);
+                                }
+
+                                return reviewResponse.json();
+                            })
+                            .then(reviewData => {
+                                const refreshedCourt = {
+                                    ...reviewData.court,
+                                    reviews: reviewData.reviews || [],
+                                    avg_rating: reviewData.court?.rating ?? 0
+                                };
+
+                                showSidebar('Court details', buildCourtCard(refreshedCourt));
+                            })
+                            .catch(error => {
+                                console.error('Error refreshing court details:', error);
+                            });
                     }
                 })
                 .catch(error => {
@@ -295,10 +443,10 @@
 
             card.innerHTML = `
                 <h3>${court.name || 'Untitled Court'}</h3>
-                ${court.photo ? `<img src="${resolvePhotoUrl(court.photo)}" alt="Court photo" style="max-width:100%; border-radius:8px; margin-bottom:12px;">` : ''}
+                ${court.photo ? `<img src="${resolvePhotoUrl(court.photo)}" alt="Court photo" class="court-photo">` : ''}
                 <p class="court-address"><strong>📍Address:</strong> ${court.address || 'Not added'}</p>
                 <p class="court-city"><strong>🏙️City:</strong> ${court.city || 'Not added'}</p>
-                <p class="court-coordinates"><strong>Coordinates:</strong> ${court.latitude}, ${court.longitude}</p>
+                <p class="court-coordinates"><strong>🧭Coordinates:</strong> ${court.latitude}, ${court.longitude}</p>
                 <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating ? averageRating.toFixed(1) : 'No rating'}${averageRating ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p>
                 <div class="court-actions">
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="like">👍 Like (${court.likes || 0})</button>
@@ -308,10 +456,26 @@
                 <div class="court-comments-header"><strong>💬Comments:</strong></div>
                 <div class="court-comments">${reviewMarkup}</div>
                 <div class="court-review-form-wrap"></div>
+                @if(!auth()->check())
+                    <p class="sidebar-login-prompt">Please log in or register to post a review and to react.</p>
+                @endif
+                @if(auth()->check() && auth()->user()->is_admin == 1)
+                    <button type="button" class="edit-court-btn">Edit court</button>
+                    <button type="button" class="delete-court-btn" data-court-id="${court.id}">Delete court</button>
+                @endif
             `;
-
+            
             const reviewFormWrap = card.querySelector('.court-review-form-wrap');
             const reactionButtons = card.querySelectorAll('.reaction-btn');
+            const editButton = card.querySelector('.edit-court-btn');
+            const deleteButton = card.querySelector('.delete-court-btn');
+
+            if (editButton) {
+                editButton.addEventListener('click', function() {
+                    showSidebar('Edit court', editCourt(court));
+                });
+            }
+
             reactionButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     if (!canAddCourt) {
@@ -344,6 +508,37 @@
                 });
             });
 
+            if (deleteButton) {
+            deleteButton.addEventListener('click', function () {
+                if (!confirm('Delete this court?')) {
+                    return;
+                }
+
+            fetch(`/admin/courts/${court.id}`, {
+                method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Server error: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            closeSidebar();
+                            loadCourts();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting court:', error);
+                    });
+                });
+            }
+
             if (canAddCourt) {
                 reviewFormWrap.appendChild(buildReviewForm(court.id));
             }
@@ -365,28 +560,33 @@
                     return response.json();
                 })
                 .then(courts => {
-                    map.eachLayer(layer => {
-                        if (layer instanceof L.Marker) {
-                            map.removeLayer(layer);
-                        }
-                    });
+                    allCourts = courts;
 
-                    courts.forEach(court => {
-                        const marker = L.marker(
-                            [court.latitude, court.longitude],
-                            { icon: courtIcon }
-                        ).addTo(map);
-
-                        marker.on('click', (event) => {
-                            L.DomEvent.stopPropagation(event);
-                            showSidebar('Court details', buildCourtCard(court));
-                        });
-                    });
+                    renderCourts(allCourts);
                 })
                 .catch(error => {
                     console.error('Error loading courts:', error);
-                    showSidebar('Error', '<p>Could not load courts.</p>');
                 });
+        }
+
+        function renderCourts(courts) {
+            map.eachLayer(layer => {
+                if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                }
+            });
+
+            courts.forEach(court => {
+                const marker = L.marker(
+                    [court.latitude, court.longitude],
+                    { icon: courtIcon }
+                ).addTo(map);
+
+                marker.on('click', (event) => {
+                    L.DomEvent.stopPropagation(event);
+                    showSidebar('Court details', buildCourtCard(court));
+                });
+            });
         }
 
         map.on('click', function (event) {

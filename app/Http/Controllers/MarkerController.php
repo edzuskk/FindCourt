@@ -49,6 +49,36 @@ class MarkerController extends Controller
             'success' => true,
             'court' => $court,
         ]);
+    }
+    public function update(Request $request, Court $court)
+    {
+        $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:255'],
+            'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+            'description' => ['nullable', 'string'],
+        ]);
 
+        if ($request->hasFile('photo')) {
+            $validated['photo'] = $request->file('photo')->store('courts', 'public');
+        }
+
+        $court->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'court' => $court,
+        ]);
+    }
+    public function destroy(Court $court)
+    {
+        $court->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Court deleted successfully.',
+        ]);
     }
 }
