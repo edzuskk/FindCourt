@@ -36,7 +36,7 @@ class SessionController extends Controller
 
     public function show()
     {
-        $user = auth()->user();
+        $user = auth()->user()->load(['courts', 'reviews.court']);
         return view('profile.view', compact('user'));
     }
 
@@ -44,5 +44,29 @@ class SessionController extends Controller
     {
         $user = auth()->user();
         return view('profile.edit', compact('user'));
+    }
+
+    public function update(Request $request)
+    {
+        $validated = $request->validate([
+            'username' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email'],
+            'profile_picture' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
+        ]);
+
+        $user = auth()->user();
+
+        $user->fill([
+            'username' => $validated['username'],
+            'email' => $validated['email'],
+        ]);
+
+        if ($request->hasFile('profile_picture')) {
+            $user->photo = $request->file('profile_picture')->store('profiles', 'public');
+        }
+
+        $user->save();
+
+        return redirect()->route('profile.view');
     }
 }

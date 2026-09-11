@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Court extends Model
 {
@@ -25,5 +26,10 @@ class Court extends Model
     public function reviews()
     {
         return $this->hasMany(CourtReview::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

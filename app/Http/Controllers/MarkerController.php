@@ -1,9 +1,10 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\Court;
 
+use App\Models\Court;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class MarkerController extends Controller
 {
@@ -42,6 +43,9 @@ class MarkerController extends Controller
         if ($request->hasFile('photo')) {
             $validated['photo'] = $request->file('photo')->store('courts', 'public');
         }
+
+        $validated['user_id'] = Auth::id();
+        $validated['username'] = Auth::user()?->username;
 
         $court = Court::create($validated);
 

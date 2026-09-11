@@ -19,6 +19,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/courts/{court}/reviews', [App\Http\Controllers\CourtReviewController::class, 'store'])->name('courts.reviews.store');
     Route::post('/courts/{court}/react', [App\Http\Controllers\CourtReviewController::class, 'react'])->name('courts.react');
     Route::get('/profile/edit', [App\Http\Controllers\SessionController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [App\Http\Controllers\SessionController::class, 'update'])->name('profile.update');
 });
 
 Route::get('/map', [App\Http\Controllers\MarkerController::class, 'index'])->name('map.page');
