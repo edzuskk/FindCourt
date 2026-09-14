@@ -29,7 +29,7 @@
                     <a href="{{ route('admin.dashboard') }}" class="admin-link">Admin Panel</a>
                 @endif
             @else
-                <p style="color: white">Please register to add courts.</p>
+                <p style="color: white">Please register or login to add courts.</p>
                 <a href="{{ route('login') }}">Login</a>
                 <a href="{{ route('register') }}">Register</a>
             @endauth

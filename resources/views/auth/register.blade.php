@@ -20,7 +20,7 @@
                                 </ul>
                             </div>
                         @endif
-
+                        
                         <div class="auth-field">
                             <label for="username">Username</label>
                             <input type="text" id="username" name="username" required>

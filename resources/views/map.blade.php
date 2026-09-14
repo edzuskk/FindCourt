@@ -21,16 +21,16 @@
         const canAddCourt = @json(auth()->check());
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
         const mapBounds = L.latLngBounds(
-            [56.20, 21],
-            [58.10, 28.25]
+            [55.60, 20.50],
+            [58.10, 28.30]
         );
 
         const map = L.map('map', {
-            zoomControl: false,
-            maxBounds: mapBounds,
-            maxBoundsViscosity: 1.0,
-            minZoom: 7,
-            maxZoom: 19
+        zoomControl: false,
+        maxBounds: mapBounds,
+        maxBoundsViscosity: 1.0,
+        minZoom: 7,
+        maxZoom: 19
         }).setView([56.9630576312498, 24.810031163689104], 8.1);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -290,7 +290,7 @@
                     formData.append('photo', photoInput.files[0]);
                 }
 
-                fetch(`/courts/${court.id}`, {
+                fetch(`/admin/courts/${court.id}`, {
                     method: 'PUT',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -324,15 +324,17 @@
             form.innerHTML = `
                 @csrf
                 <div class="form-group">
-                    <label for="reviewRating">Rating (1-5)</label>
-                    <select id="reviewRating" name="rating">
-                        <option value="">No rating</option>
-                        <option value="5">5 - Excellent</option>
-                        <option value="4">4 - Good</option>
-                        <option value="3">3 - Average</option>
-                        <option value="2">2 - Poor</option>
-                        <option value="1">1 - Very poor</option>
-                    </select>
+                <label>Rating</label>
+
+                <div id="ratingStars" class="rating-stars">
+                    <span data-rating="1">★</span>
+                    <span data-rating="2">★</span>
+                    <span data-rating="3">★</span>
+                    <span data-rating="4">★</span>
+                    <span data-rating="5">★</span>
+                </div>
+
+                <input type="hidden" id="reviewRating" name="rating" value="">
                 </div>
 
                 <div class="form-group">
@@ -353,12 +355,30 @@
                 <button type="submit">Post review</button>
             `;
 
+            const stars = form.querySelectorAll('#ratingStars span');
+            const ratingInput = form.querySelector('#reviewRating');
+
+            stars.forEach(star => {
+                star.addEventListener('click', function () {
+                    const rating = this.dataset.rating;
+
+                    ratingInput.value = rating;
+
+                    stars.forEach(s => {
+                        s.classList.toggle(
+                            'selected',
+                            Number(s.dataset.rating) <= Number(rating)
+                        );
+                    });
+                });
+            });
+
             form.addEventListener('submit', function(event) {
                 event.preventDefault();
 
-                const rating = form.querySelector('#reviewRating').value;
                 const photoInput = form.querySelector('#reviewPhoto');
                 const comment = form.querySelector('#reviewComment').value;
+                const rating = ratingInput.value;
 
                 const formData = new FormData();
 
