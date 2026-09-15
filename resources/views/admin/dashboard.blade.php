@@ -41,6 +41,7 @@
                                 <th>Courts</th>
                                 <th>Reviews</th>
                                 <th>Joined</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -53,6 +54,7 @@
                                     <td>{{ $user->courts_count }}</td>
                                     <td>{{ $user->reviews_count }}</td>
                                     <td>{{ $user->created_at?->format('M d, Y') ?? '—' }}</td>
+                                    <td><button class="delete-court-btn">Delete User</button></td>
                                 </tr>
                             @empty
                                 <tr>

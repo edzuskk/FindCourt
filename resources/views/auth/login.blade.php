@@ -44,7 +44,9 @@
 
                     <p class="auth-footer">
                         Don’t have an account?
-                        <a href="{{ route('register') }}">Register</a>
+                        <a href="{{ route('register') }}">Register</a><br>
+                        Forgot password?
+                        <a href="{{ route('forgot-password') }}">Forgot password?</a>
                     </p>
                 </div>
             </div>

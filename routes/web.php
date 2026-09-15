@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
 
 Route::get('/', [App\Http\Controllers\MarkerController::class, 'index'])->name('map');
 
@@ -32,3 +35,67 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::delete('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'destroy'])->name('courts.destroy');
     Route::put('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'update'])->name('courts.update');
 });
+
+Route::get('/forgot-password', function () {
+    return view('auth.forgot-password');
+})->name('forgot-password');
+
+Route::post('/forgot-password', function (Request $request) {
+    $request->validate([
+        'email' => ['required', 'email'],
+    ]);
+
+    $status = Password::sendResetLink(
+        $request->only('email')
+    );
+
+    if ($status === Password::RESET_LINK_SENT) {
+        return back()->with('status', 'Password reset link has been sent to your email.');
+    }
+
+    return back()->withErrors([
+        'email' => 'We could not find an account with that email address.',
+    ]);
+})->name('password.email');
+
+Route::get('/reset-password/{token}', function (
+    string $token,
+    Request $request
+) {
+    return view('auth.reset-password', [
+        'token' => $token,
+        'email' => $request->email,
+    ]);
+})->name('password.reset');
+
+Route::post('/reset-password', function (Request $request) {
+
+    $request->validate([
+        'token' => ['required'],
+        'email' => ['required', 'email'],
+        'password' => ['required', 'confirmed', 'min:8'],
+    ]);
+
+    $status = Password::reset(
+        $request->only(
+            'email',
+            'password',
+            'password_confirmation',
+            'token'
+        ),
+        function ($user, $password) {
+            $user->forceFill([
+                'password' => Hash::make($password),
+            ])->save();
+        }
+    );
+
+    if ($status === Password::PASSWORD_RESET) {
+        return redirect('/login')
+            ->with('status', 'Password successfully reset!');
+    }
+
+    return back()->withErrors([
+        'email' => 'The password reset link is invalid or has expired.',
+    ]);
+})->name('password.update');

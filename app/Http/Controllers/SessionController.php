@@ -69,4 +69,5 @@ class SessionController extends Controller
 
         return redirect()->route('profile.view');
     }
+
 }
