@@ -2,7 +2,7 @@
     <div style="margin-top: 50px;">
         <div style="max-width: 900px; margin: 0 auto; padding: 32px 16px 48px;">
             <div style="background: #ffffff; border: 1px solid #d7ddd8; border-radius: 20px; box-shadow: 0 20px 40px rgba(38, 49, 40, 0.08); overflow: hidden;">
-                <div style="background: linear-gradient(135deg, #1f3a2d 0%, #2d5f4b 100%); color: #ffffff; padding: 28px 30px;">
+                <div style="    background: linear-gradient(160deg, #2a0d41 0%, #6912b1 100%); color: #ffffff; padding: 28px 30px;">
                     <div style="font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; margin-bottom: 8px;">Profile settings</div>
                     <h1 style="margin: 0; font-size: clamp(2rem, 3vw, 2.6rem);">Edit your profile</h1>
                 </div>

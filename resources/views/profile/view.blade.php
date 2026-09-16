@@ -2,7 +2,7 @@
     <div style="margin-top: 50px">
     <div style="max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px;">
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
-            <h1 style="margin: 0;">Profile</h1>
+            <h1 style="margin: 0;">Your profile</h1>
             <a href="{{ route('profile.edit') }}" class="edit-profile">Edit profile</a>
         </div>
 

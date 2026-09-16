@@ -13,7 +13,7 @@ class MarkerController extends Controller
         $courts = Court::with('reviews.user')->get();
 
         $courts->transform(function ($court) {
-            $court->avg_rating = $court->reviews->avg('rating') ?: 0;
+            $court->avg_rating = $court->rating ?? ($court->reviews->avg('rating') ?: 0);
             return $court;
         });
 

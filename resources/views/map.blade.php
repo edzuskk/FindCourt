@@ -1,10 +1,27 @@
 <x-layout>
+    <div class="court-filter-bar" aria-label="Court filters">
         <div class="court-search-wrapper">
-        <input
-            id="courtSearch"
-            type="text"
-            placeholder="Search courts...">
+            <span class="filter-icon" aria-hidden="true">🔎︎</span>
+            <input
+                id="courtSearch"
+                type="text"
+                placeholder="Search courts, cities, addresses..."
+                aria-label="Search courts"
+            >
         </div>
+
+        <div class="rating-filter-wrapper">
+            <label for="ratingFilter">Rating</label>
+            <select id="ratingFilter" aria-label="Filter courts by rating">
+                <option value="all">All ratings</option>
+                <option value="5">5 stars</option>
+                <option value="4">4+ stars</option>
+                <option value="3">3+ stars</option>
+                <option value="2">2+ stars</option>
+                <option value="1">1+ stars</option>
+            </select>
+        </div>
+    </div>
 
     <div id="map"></div>
 
@@ -39,28 +56,45 @@
         }).addTo(map);
         
         const courtSearch = document.getElementById('courtSearch');
+        const ratingFilter = document.getElementById('ratingFilter');
         let allCourts = [];
+        let currentSearchTerm = '';
+        let currentRatingFilter = 'all';
 
-        courtSearch.addEventListener('input', function () {
-            const term = this.value.trim().toLowerCase();
+        function getCourtRating(court) {
+            const rawRating = Number(court.avg_rating ?? court.rating ?? 0);
+            return Number.isFinite(rawRating) ? rawRating : 0;
+        }
 
-            if (!allCourts.length) return;
+        function applyCourtFilters() {
+            const term = currentSearchTerm.trim().toLowerCase();
 
-            const filteredCourts = term === ''
-                ? allCourts
-                : allCourts.filter(court => {
-                    const searchable = [
-                        court.name,
-                        court.address,
-                        court.city,
-                        court.state,
-                        court.description
-                    ].filter(Boolean).join(' ').toLowerCase();
+            const filteredCourts = allCourts.filter(court => {
+                const searchable = [
+                    court.name,
+                    court.address,
+                    court.city,
+                    court.state,
+                    court.description
+                ].filter(Boolean).join(' ').toLowerCase();
 
-                    return searchable.includes(term);
-                });
+                const matchesSearch = term === '' || searchable.includes(term);
+                const matchesRating = currentRatingFilter === 'all' || getCourtRating(court) >= Number(currentRatingFilter);
+
+                return matchesSearch && matchesRating;
+            });
 
             renderCourts(filteredCourts);
+        }
+
+        ratingFilter.addEventListener('change', function () {
+            currentRatingFilter = this.value;
+            applyCourtFilters();
+        });
+
+        courtSearch.addEventListener('input', function () {
+            currentSearchTerm = this.value;
+            applyCourtFilters();
         });
 
         const sidebar = document.getElementById('sidebar');
@@ -154,6 +188,20 @@
                 </div>
 
                 <div class="form-group">
+                <label>Rating</label>
+
+                <div class="rating-stars">
+                    <span data-rating="1">★</span>
+                    <span data-rating="2">★</span>
+                    <span data-rating="3">★</span>
+                    <span data-rating="4">★</span>
+                    <span data-rating="5">★</span>
+                </div>
+
+                <input type="hidden" id="courtRatingInput" name="rating" value="">
+                </div>  
+
+                <div class="form-group">
                     <label for="courtDescription">Description</label>
                     <textarea id="courtDescription" name="description" required ></textarea>
                 </div>
@@ -169,6 +217,24 @@
                 <button type="submit">Save court</button>
             `;
 
+            const stars = form.querySelectorAll('.rating-stars span');
+            const ratingInput = form.querySelector('#courtRatingInput');
+
+            stars.forEach(star => {
+                star.addEventListener('click', function () {
+                    const rating = this.dataset.rating;
+
+                    ratingInput.value = rating;
+
+                    stars.forEach(s => {
+                        s.classList.toggle(
+                            'selected',
+                            Number(s.dataset.rating) <= Number(rating)
+                        );
+                    });
+                });
+            });
+
             form.addEventListener('submit', function(event) {
                 event.preventDefault();
 
@@ -178,6 +244,12 @@
                 const state = form.querySelector('#courtState').value;
                 const description = form.querySelector('#courtDescription').value;
                 const photoInput = form.querySelector('#courtPhoto');
+                const rating = ratingInput.value;
+
+                if (!rating) {
+                    alert('Please choose a rating before saving the court.');
+                    return;
+                }
 
                 const formData = new FormData();
                 formData.append('name', name || '');
@@ -185,6 +257,7 @@
                 formData.append('city', city || '');
                 formData.append('state', state || '');
                 formData.append('description', description || '');
+                formData.append('rating', rating || '');
                 formData.append('latitude', String(latitude));
                 formData.append('longitude', String(longitude));
 
@@ -326,7 +399,7 @@
                 <div class="form-group">
                 <label>Rating</label>
 
-                <div id="ratingStars" class="rating-stars">
+                <div class="rating-stars">
                     <span data-rating="1">★</span>
                     <span data-rating="2">★</span>
                     <span data-rating="3">★</span>
@@ -334,7 +407,7 @@
                     <span data-rating="5">★</span>
                 </div>
 
-                <input type="hidden" id="reviewRating" name="rating" value="">
+                <input type="hidden" id="reviewRatingInput" name="rating" value="">
                 </div>
 
                 <div class="form-group">
@@ -355,8 +428,8 @@
                 <button type="submit">Post review</button>
             `;
 
-            const stars = form.querySelectorAll('#ratingStars span');
-            const ratingInput = form.querySelector('#reviewRating');
+            const stars = form.querySelectorAll('.rating-stars span');
+            const ratingInput = form.querySelector('#reviewRatingInput');
 
             stars.forEach(star => {
                 star.addEventListener('click', function () {
@@ -379,6 +452,11 @@
                 const photoInput = form.querySelector('#reviewPhoto');
                 const comment = form.querySelector('#reviewComment').value;
                 const rating = ratingInput.value;
+
+                if (!rating) {
+                    alert('Please choose a rating before posting your review.');
+                    return;
+                }
 
                 const formData = new FormData();
 
@@ -445,7 +523,8 @@
 
             const reviews = Array.isArray(court.reviews) ? court.reviews : [];
             const totalReviews = reviews.length;
-            const averageRating = court.avg_rating ?? (reviews.length ? (reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length) : 0);
+            const calculatedAverage = reviews.length ? (reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length) : 0;
+            const averageRating = Number(court.avg_rating ?? calculatedAverage ?? 0);
 
             let reviewMarkup = '';
             if (reviews.length === 0) {
@@ -467,7 +546,7 @@
                 <p class="court-address"><strong>📍Address:</strong> ${court.address || 'Not added'}</p>
                 <p class="court-city"><strong>🏙️City:</strong> ${court.city || 'Not added'}</p>
                 <p class="court-coordinates"><strong>🧭Coordinates:</strong> ${court.latitude}, ${court.longitude}</p>
-                <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating ? averageRating.toFixed(1) : 'No rating'}${averageRating ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p>
+                <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating > 0 ? averageRating.toFixed(1) : 'No rating'}${averageRating > 0 ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p>
                 <div class="court-actions">
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="like">👍 Like (${court.likes || 0})</button>
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="dislike">👎 Dislike (${court.dislikes || 0})</button>
@@ -581,8 +660,7 @@
                 })
                 .then(courts => {
                     allCourts = courts;
-
-                    renderCourts(allCourts);
+                    applyCourtFilters();
                 })
                 .catch(error => {
                     console.error('Error loading courts:', error);

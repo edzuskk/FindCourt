@@ -30,6 +30,16 @@
         <div class="admin-sections">
             <section class="admin-panel">
                 <div class="admin-panel-header">Users</div>
+                <div class="court-search-wrapper">
+                    <span class="filter-icon" aria-hidden="true">🔎︎</span>
+                    <input
+                        class="admin-search-input"
+                        data-target=".admin-table-users"
+                        type="text"
+                        placeholder="Search users..."
+                        aria-label="Search users"
+                    >
+                </div>
                 <div class="admin-table-wrap">
                     <table class="admin-table admin-table-users">
                         <thead>
@@ -68,6 +78,16 @@
 
             <section class="admin-panel">
                 <div class="admin-panel-header">Courts</div>
+                <div class="court-search-wrapper">
+                    <span class="filter-icon" aria-hidden="true">🔎︎</span>
+                    <input
+                        class="admin-search-input"
+                        data-target=".admin-table-courts"
+                        type="text"
+                        placeholder="Search courts..."
+                        aria-label="Search courts"
+                    >
+                </div>
                 <div class="admin-table-wrap">
                     <table class="admin-table admin-table-courts">
                         <thead>
@@ -122,6 +142,16 @@
 
             <section class="admin-panel">
                 <div class="admin-panel-header">Court Reviews</div>
+                <div class="court-search-wrapper">
+                    <span class="filter-icon" aria-hidden="true">🔎︎</span>
+                    <input
+                        class="admin-search-input"
+                        data-target=".admin-table-reviews"
+                        type="text"
+                        placeholder="Search court reviews..."
+                        aria-label="Search court reviews"
+                    >
+                </div>
                 <div class="admin-table-wrap">
                     <table class="admin-table admin-table-reviews">
                         <thead>
@@ -239,6 +269,23 @@
                 modal.classList.remove('hidden');
                 modal.setAttribute('aria-hidden', 'false');
             }
+
+            document.querySelectorAll('.admin-search-input').forEach((input) => {
+                input.addEventListener('input', function () {
+                    const table = document.querySelector(this.dataset.target);
+                    if (!table) {
+                        return;
+                    }
+
+                    const term = this.value.trim().toLowerCase();
+                    const rows = table.querySelectorAll('tbody tr');
+
+                    rows.forEach((row) => {
+                        const rowText = row.textContent.toLowerCase();
+                        row.style.display = term === '' || rowText.includes(term) ? '' : 'none';
+                    });
+                });
+            });
 
             document.querySelectorAll('.edit-court-btn').forEach((button) => {
                 button.addEventListener('click', function () {
