@@ -47,4 +47,28 @@ class CourtReviewsTest extends TestCase
             'rating' => 5,
         ]);
     }
+
+    public function test_admin_can_delete_a_user(): void
+    {
+        $admin = User::factory()->create([
+            'username' => 'AdminUser',
+            'email' => 'admin@example.com',
+            'password' => 'Password123!',
+            'is_admin' => true,
+        ]);
+
+        $user = User::factory()->create([
+            'username' => 'TargetUser',
+            'email' => 'target@example.com',
+            'password' => 'Password123!',
+            'is_admin' => false,
+        ]);
+
+        $response = $this->actingAs($admin)->deleteJson("/admin/users/{$user->id}");
+
+        $response->assertOk();
+        $this->assertDatabaseMissing('users', [
+            'id' => $user->id,
+        ]);
+    }
 }

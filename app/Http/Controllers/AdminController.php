@@ -32,4 +32,21 @@ class AdminController extends Controller
 
         return view('admin.dashboard', compact('users', 'courts', 'courtReviews'));
     }
+
+    public function destroy(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot delete your own account.',
+            ], 422);
+        }
+
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User deleted successfully.',
+        ]);
+    }
 }

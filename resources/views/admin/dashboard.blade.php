@@ -64,7 +64,15 @@
                                     <td>{{ $user->courts_count }}</td>
                                     <td>{{ $user->reviews_count }}</td>
                                     <td>{{ $user->created_at?->format('M d, Y') ?? '—' }}</td>
-                                    <td><button class="delete-court-btn">Delete User</button></td>
+                                    <td>
+                                        <button
+                                            type="button"
+                                            class="delete-user-btn"
+                                            data-user-id="{{ $user->id }}"
+                                        >
+                                            Delete User
+                                        </button>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
@@ -296,6 +304,42 @@
                         city: this.dataset.city,
                         state: this.dataset.state,
                         description: this.dataset.description
+                    });
+                });
+            });
+
+            document.querySelectorAll('.delete-user-btn').forEach((button) => {
+                button.addEventListener('click', function () {
+                    const userId = this.dataset.userId;
+
+                    if (!confirm('Delete this user?')) {
+                        return;
+                    }
+
+                    fetch(`/admin/users/${userId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(async (response) => {
+                        const data = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Server error: ' + response.status);
+                        }
+
+                        return data;
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error deleting user:', error);
+                        alert(error.message || 'Failed to delete user.');
                     });
                 });
             });
