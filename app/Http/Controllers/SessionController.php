@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class SessionController extends Controller
 {
     public function destroy()
     {
-        auth()->logout();
+        Auth::logout();
         return redirect('/');
     }
     public function create()
@@ -49,8 +51,8 @@ class SessionController extends Controller
     public function update(Request $request)
     {
         $validated = $request->validate([
-            'username' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email'],
+            'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore(auth()->id())],
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore(auth()->id())],
             'profile_picture' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
@@ -62,6 +64,9 @@ class SessionController extends Controller
         ]);
 
         if ($request->hasFile('profile_picture')) {
+            if ($user->photo) {
+                Storage::disk('public')->delete($user->photo);
+            }
             $user->photo = $request->file('profile_picture')->store('profiles', 'public');
         }
 

@@ -119,11 +119,20 @@
 
         function resolvePhotoUrl(photo) {
             if (!photo) return '';
-            if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('data:') || photo.startsWith('/')) {
+            if (photo.startsWith('http://') || photo.startsWith('https://') || photo.startsWith('/')) {
                 return photo;
             }
 
             return `/storage/${photo}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         function bindImagePreview(form, inputSelector, previewSelector) {
@@ -392,8 +401,9 @@
             return form;
         }
 
-        function buildReviewForm(courtId) {
+        function buildReviewForm(courtId, existingReview = null) {
             const form = document.createElement('form');
+            const isEditing = Boolean(existingReview);
             form.innerHTML = `
                 @csrf
                 <div class="form-group">
@@ -425,8 +435,16 @@
                     <textarea id="reviewComment" name="comment" placeholder="Share your experience..."></textarea>
                 </div>
 
-                <button type="submit">Post review</button>
+                <button type="submit">${isEditing ? 'Save review' : 'Post review'}</button>
             `;
+
+            if (isEditing) {
+                form.querySelector('#reviewRatingInput').value = existingReview.rating || '';
+                form.querySelector('#reviewComment').value = existingReview.comment || '';
+                form.querySelectorAll('.rating-stars span').forEach(star => {
+                    star.classList.toggle('selected', Number(star.dataset.rating) <= Number(existingReview.rating || 0));
+                });
+            }
 
             const stars = form.querySelectorAll('.rating-stars span');
             const ratingInput = form.querySelector('#reviewRatingInput');
@@ -467,8 +485,8 @@
                     formData.append('photo', photoInput.files[0]);
                 }
 
-                fetch(`/courts/${courtId}/reviews`, {
-                    method: 'POST',
+                fetch(isEditing ? `/courts/${courtId}/reviews/${existingReview.id}` : `/courts/${courtId}/reviews`, {
+                    method: isEditing ? 'PUT' : 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -532,26 +550,27 @@
             } else {
                 reviewMarkup = reviews.map(review => `
                     <div class="review-item">
-                        <strong>${review.username || 'Anonymous'}</strong>
-                        <div>⭐ ${review.rating || 'No rating'}</div>
-                        ${review.photo ? `<img src="${resolvePhotoUrl(review.photo)}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
-                        <p>${review.comment || 'No comment provided.'}</p>
+                        <strong>${escapeHtml(review.username)}</strong>
+                        <div>⭐ ${escapeHtml(review.rating || 'No rating')}</div>
+                        ${review.photo ? `<img src="${escapeHtml(resolvePhotoUrl(review.photo))}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
+                        <p>${escapeHtml(review.comment || 'No comment provided.')} </p>
+                        ${review.is_owner ? '<button type="button" class="edit-review-btn">Edit review</button><button type="button" class="delete-review-btn">Delete review</button>' : ''}
                     </div>
                 `).join('');
             }
 
             card.innerHTML = `
-                <h3>${court.name || 'Untitled Court'}</h3>
-                ${court.photo ? `<img src="${resolvePhotoUrl(court.photo)}" alt="Court photo" class="court-photo">` : ''}
-                <p class="court-address"><strong>📍Address:</strong> ${court.address || 'Not added'}</p>
-                <p class="court-city"><strong>🏙️City:</strong> ${court.city || 'Not added'}</p>
-                <p class="court-coordinates"><strong>🧭Coordinates:</strong> ${court.latitude}, ${court.longitude}</p>
+                <h3>${escapeHtml(court.name || 'Untitled Court')}</h3>
+                ${court.photo ? `<img src="${escapeHtml(resolvePhotoUrl(court.photo))}" alt="Court photo" class="court-photo">` : ''}
+                <p class="court-address"><strong>📍Address:</strong> ${escapeHtml(court.address || 'Not added')}</p>
+                <p class="court-city"><strong>🏙️City:</strong> ${escapeHtml(court.city || 'Not added')}</p>
+                <p class="court-coordinates"><strong>🧭Coordinates:</strong> ${escapeHtml(`${court.latitude}, ${court.longitude}`)}</p>
                 <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating > 0 ? averageRating.toFixed(1) : 'No rating'}${averageRating > 0 ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p>
                 <div class="court-actions">
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="like">👍 Like (${court.likes || 0})</button>
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="dislike">👎 Dislike (${court.dislikes || 0})</button>
                 </div>
-                <p class="court-description"><strong>📝Description:</strong> ${court.description || 'No description yet.'}</p>
+                <p class="court-description"><strong>📝Description:</strong> ${escapeHtml(court.description || 'No description yet.')}</p>
                 <div class="court-comments-header"><strong>💬Comments:</strong></div>
                 <div class="court-comments">${reviewMarkup}</div>
                 <div class="court-review-form-wrap"></div>
@@ -566,8 +585,54 @@
             
             const reviewFormWrap = card.querySelector('.court-review-form-wrap');
             const reactionButtons = card.querySelectorAll('.reaction-btn');
+            const editReviewButtons = card.querySelectorAll('.edit-review-btn');
+            const deleteReviewButtons = card.querySelectorAll('.delete-review-btn');
             const editButton = card.querySelector('.edit-court-btn');
             const deleteButton = card.querySelector('.delete-court-btn');
+
+            editReviewButtons.forEach((button, index) => {
+                button.addEventListener('click', function() {
+                    showSidebar('Edit review', buildReviewForm(court.id, reviews[index]));
+                });
+            });
+
+            deleteReviewButtons.forEach((button, index) => {
+                button.addEventListener('click', function() {
+                    if (!confirm('Delete this review?')) {
+                        return;
+                    }
+
+                    fetch(`/courts/${court.id}/reviews/${reviews[index].id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Server error: ' + response.status);
+                            }
+
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                loadCourts();
+                                fetch(`/courts/${court.id}/reviews`)
+                                    .then(reviewResponse => reviewResponse.json())
+                                    .then(reviewData => showSidebar('Court details', buildCourtCard({
+                                        ...reviewData.court,
+                                        reviews: reviewData.reviews || [],
+                                        avg_rating: reviewData.court?.rating ?? 0
+                                    })));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error deleting review:', error);
+                        });
+                });
+            });
 
             if (editButton) {
                 editButton.addEventListener('click', function() {

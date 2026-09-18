@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Court;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class MarkerController extends Controller
 {
@@ -32,12 +33,10 @@ class MarkerController extends Controller
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
-            'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'description' => ['nullable', 'string'],
-            'likes' => ['nullable', 'integer', 'min:0'],
-            'dislikes' => ['nullable', 'integer', 'min:0'],
-            'latitude' => ['required', 'numeric'],
-            'longitude' => ['required', 'numeric'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
         ]);
 
         if ($request->hasFile('photo')) {
@@ -66,10 +65,17 @@ class MarkerController extends Controller
         ]);
 
         if ($request->hasFile('photo')) {
+            $oldPhoto = $court->photo;
             $validated['photo'] = $request->file('photo')->store('courts', 'public');
+        } else {
+            $oldPhoto = null;
         }
 
         $court->update($validated);
+
+        if ($oldPhoto) {
+            Storage::disk('public')->delete($oldPhoto);
+        }
 
         return response()->json([
             'success' => true,
@@ -78,6 +84,16 @@ class MarkerController extends Controller
     }
     public function destroy(Court $court)
     {
+        if ($court->photo) {
+            Storage::disk('public')->delete($court->photo);
+        }
+
+        foreach ($court->reviews as $review) {
+            if ($review->photo) {
+                Storage::disk('public')->delete($review->photo);
+            }
+        }
+
         $court->delete();
 
         return response()->json([

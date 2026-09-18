@@ -9,17 +9,19 @@ Route::get('/', [App\Http\Controllers\MarkerController::class, 'index'])->name('
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [App\Http\Controllers\RegisterController::class, 'create'])->name('register');
-    Route::post('/register', [App\Http\Controllers\RegisterController::class, 'store'])->name('register.store');
+    Route::post('/register', [App\Http\Controllers\RegisterController::class, 'store'])->middleware('throttle:10,1')->name('register.store');
     Route::get('/login', [App\Http\Controllers\SessionController::class, 'create'])->name('login');
-    Route::post('/login', [App\Http\Controllers\SessionController::class, 'store'])->name('login');
+    Route::post('/login', [App\Http\Controllers\SessionController::class, 'store'])->middleware('throttle:10,1')->name('login');
 });
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [App\Http\Controllers\SessionController::class, 'show'])->name('profile.view');
     Route::post('/logout', [App\Http\Controllers\SessionController::class, 'destroy'])->name('logout');
     Route::post('/courts', [App\Http\Controllers\MarkerController::class, 'store'])->name('courts.store');
-    Route::post('/courts/{court}/reviews', [App\Http\Controllers\CourtReviewController::class, 'store'])->name('courts.reviews.store');
-    Route::post('/courts/{court}/react', [App\Http\Controllers\CourtReviewController::class, 'react'])->name('courts.react');
+    Route::post('/courts/{court}/reviews', [App\Http\Controllers\CourtReviewController::class, 'store'])->middleware('throttle:20,1')->name('courts.reviews.store');
+    Route::put('/courts/{court}/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'update'])->name('courts.reviews.update');
+    Route::delete('/courts/{court}/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'destroy'])->name('courts.reviews.destroy');
+    Route::post('/courts/{court}/react', [App\Http\Controllers\CourtReviewController::class, 'react'])->middleware('throttle:60,1')->name('courts.react');
     Route::get('/profile/edit', [App\Http\Controllers\SessionController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [App\Http\Controllers\SessionController::class, 'update'])->name('profile.update');
 });
@@ -57,7 +59,7 @@ Route::post('/forgot-password', function (Request $request) {
     return back()->withErrors([
         'email' => 'We could not find an account with that email address.',
     ]);
-})->name('password.email');
+})->middleware('throttle:5,1')->name('password.email');
 
 Route::get('/reset-password/{token}', function (
     string $token,
@@ -99,4 +101,4 @@ Route::post('/reset-password', function (Request $request) {
     return back()->withErrors([
         'email' => 'The password reset link is invalid or has expired.',
     ]);
-})->name('password.update');
+})->middleware('throttle:5,1')->name('password.update');
