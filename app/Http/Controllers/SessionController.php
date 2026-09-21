@@ -38,7 +38,7 @@ class SessionController extends Controller
 
     public function show()
     {
-        $user = auth()->user()->load(['courts', 'reviews.court']);
+        $user = auth()->user()->load(['courts', 'reviews.court', 'savedCourts']);
         return view('profile.view', compact('user'));
     }
 

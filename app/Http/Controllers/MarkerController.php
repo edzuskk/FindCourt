@@ -12,10 +12,17 @@ class MarkerController extends Controller
     public function index(Request $request)
     {
         $courts = Court::with('reviews.user')->get();
+        $savedCourtIds = Auth::check()
+            ? Auth::user()->savedCourts()->pluck('courts.id')->all()
+            : [];
 
         $courts->transform(function ($court) {
             $court->avg_rating = $court->rating ?? ($court->reviews->avg('rating') ?: 0);
             return $court;
+        });
+
+        $courts->each(function ($court) use ($savedCourtIds) {
+            $court->is_saved = in_array($court->id, $savedCourtIds, true);
         });
 
         if ($request->expectsJson() || $request->is('courts')) {

@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/courts/{court}/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'update'])->name('courts.reviews.update');
     Route::delete('/courts/{court}/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'destroy'])->name('courts.reviews.destroy');
     Route::post('/courts/{court}/react', [App\Http\Controllers\CourtReviewController::class, 'react'])->middleware('throttle:60,1')->name('courts.react');
+    Route::post('/courts/{court}/save', [App\Http\Controllers\SavedCourtController::class, 'toggle'])->name('courts.save');
     Route::get('/profile/edit', [App\Http\Controllers\SessionController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [App\Http\Controllers\SessionController::class, 'update'])->name('profile.update');
 });

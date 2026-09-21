@@ -156,4 +156,46 @@ class CourtReviewsTest extends TestCase
             'id' => $user->id,
         ]);
     }
+
+    public function test_user_can_save_and_unsave_a_court(): void
+    {
+        $user = User::factory()->create();
+        $court = Court::create([
+            'name' => 'Central Court',
+            'latitude' => 39.7817,
+            'longitude' => -89.6501,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/courts/{$court->id}/save")
+            ->assertOk()
+            ->assertJson(['success' => true, 'is_saved' => true]);
+
+        $this->assertDatabaseHas('saved_courts', [
+            'user_id' => $user->id,
+            'court_id' => $court->id,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson("/courts/{$court->id}/save")
+            ->assertOk()
+            ->assertJson(['success' => true, 'is_saved' => false]);
+
+        $this->assertDatabaseMissing('saved_courts', [
+            'user_id' => $user->id,
+            'court_id' => $court->id,
+        ]);
+    }
+
+    public function test_guests_cannot_save_a_court(): void
+    {
+        $court = Court::create([
+            'name' => 'Central Court',
+            'latitude' => 39.7817,
+            'longitude' => -89.6501,
+        ]);
+
+        $this->postJson("/courts/{$court->id}/save")
+            ->assertUnauthorized();
+    }
 }

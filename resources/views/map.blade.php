@@ -36,6 +36,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const canAddCourt = @json(auth()->check());
+        const currentUserId = @json(auth()->id());
         const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
         const mapBounds = L.latLngBounds(
             [55.60, 20.50],
@@ -57,6 +58,7 @@
         
         const courtSearch = document.getElementById('courtSearch');
         const ratingFilter = document.getElementById('ratingFilter');
+        const requestedCourtId = new URLSearchParams(window.location.search).get('court');
         let allCourts = [];
         let currentSearchTerm = '';
         let currentRatingFilter = 'all';
@@ -494,10 +496,13 @@
                     body: formData
                 })
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Server error: ' + response.status);
-                    }
-                    return response.json();
+                    return response.json().catch(() => ({})).then(data => {
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Could not save the review.');
+                        }
+
+                        return data;
+                    });
                 })
                 .then(data => {
                     if (data.success) {
@@ -526,6 +531,7 @@
                     }
                 })
                 .catch(error => {
+                    alert(error.message);
                     console.error('Error posting review:', error);
                 });
             });
@@ -540,6 +546,9 @@
             card.className = 'court-card';
 
             const reviews = Array.isArray(court.reviews) ? court.reviews : [];
+            const ownReview = reviews.find(review =>
+                review.is_owner || (currentUserId && Number(review.user_id) === Number(currentUserId))
+            );
             const totalReviews = reviews.length;
             const calculatedAverage = reviews.length ? (reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length) : 0;
             const averageRating = Number(court.avg_rating ?? calculatedAverage ?? 0);
@@ -554,7 +563,7 @@
                         <div>⭐ ${escapeHtml(review.rating || 'No rating')}</div>
                         ${review.photo ? `<img src="${escapeHtml(resolvePhotoUrl(review.photo))}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
                         <p>${escapeHtml(review.comment || 'No comment provided.')} </p>
-                        ${review.is_owner ? '<button type="button" class="edit-review-btn">Edit review</button><button type="button" class="delete-review-btn">Delete review</button>' : ''}
+                        ${(review.is_owner || (currentUserId && Number(review.user_id) === Number(currentUserId))) ? `<button type="button" class="edit-review-btn" data-review-id="${review.id}">Edit review</button><button type="button" class="delete-review-btn" data-review-id="${review.id}">Delete review</button>` : ''}
                     </div>
                 `).join('');
             }
@@ -569,6 +578,7 @@
                 <div class="court-actions">
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="like">👍 Like (${court.likes || 0})</button>
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="dislike">👎 Dislike (${court.dislikes || 0})</button>
+                    <button type="button" class="court-save-btn" data-court-id="${court.id}" data-saved="${court.is_saved ? 'true' : 'false'}">💾 ${court.is_saved ? 'Saved' : 'Save court'}</button>
                 </div>
                 <p class="court-description"><strong>📝Description:</strong> ${escapeHtml(court.description || 'No description yet.')}</p>
                 <div class="court-comments-header"><strong>💬Comments:</strong></div>
@@ -585,24 +595,35 @@
             
             const reviewFormWrap = card.querySelector('.court-review-form-wrap');
             const reactionButtons = card.querySelectorAll('.reaction-btn');
+            const saveButtons = card.querySelectorAll('.court-save-btn');
             const editReviewButtons = card.querySelectorAll('.edit-review-btn');
             const deleteReviewButtons = card.querySelectorAll('.delete-review-btn');
             const editButton = card.querySelector('.edit-court-btn');
             const deleteButton = card.querySelector('.delete-court-btn');
 
-            editReviewButtons.forEach((button, index) => {
+            editReviewButtons.forEach(button => {
                 button.addEventListener('click', function() {
-                    showSidebar('Edit review', buildReviewForm(court.id, reviews[index]));
+                    const review = reviews.find(item => String(item.id) === button.dataset.reviewId);
+
+                    if (review) {
+                        showSidebar('Edit review', buildReviewForm(court.id, review));
+                    }
                 });
             });
 
-            deleteReviewButtons.forEach((button, index) => {
+            deleteReviewButtons.forEach(button => {
                 button.addEventListener('click', function() {
+                    const review = reviews.find(item => String(item.id) === button.dataset.reviewId);
+
+                    if (!review) {
+                        return;
+                    }
+
                     if (!confirm('Delete this review?')) {
                         return;
                     }
 
-                    fetch(`/courts/${court.id}/reviews/${reviews[index].id}`, {
+                    fetch(`/courts/${court.id}/reviews/${review.id}`, {
                         method: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': csrfToken,
@@ -672,6 +693,43 @@
                 });
             });
 
+            saveButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (!canAddCourt) {
+                        alert('Please log in or register to save a court.');
+                        return;
+                    }
+
+                    button.disabled = true;
+
+                    fetch(`/courts/${court.id}/save`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Server error: ' + response.status);
+                            }
+
+                            return response.json();
+                        })
+                        .then(data => {
+                            const isSaved = Boolean(data.is_saved);
+                            button.dataset.saved = isSaved ? 'true' : 'false';
+                            button.textContent = isSaved ? '💾 Saved' : '💾 Save court';
+                        })
+                        .catch(error => {
+                            console.error('Error saving court:', error);
+                        })
+                        .finally(() => {
+                            button.disabled = false;
+                        });
+                });
+            });
+
             if (deleteButton) {
             deleteButton.addEventListener('click', function () {
                 if (!confirm('Delete this court?')) {
@@ -703,7 +761,7 @@
                 });
             }
 
-            if (canAddCourt) {
+            if (canAddCourt && !ownReview) {
                 reviewFormWrap.appendChild(buildReviewForm(court.id));
             }
 
@@ -749,6 +807,11 @@
                     L.DomEvent.stopPropagation(event);
                     showSidebar('Court details', buildCourtCard(court));
                 });
+
+                if (requestedCourtId && String(court.id) === requestedCourtId) {
+                    map.setView([court.latitude, court.longitude], Math.max(map.getZoom(), 15));
+                    showSidebar('Court details', buildCourtCard(court));
+                }
             });
         }
 
