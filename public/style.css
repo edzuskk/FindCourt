@@ -1722,7 +1722,7 @@ nav {
 .admin-page {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 32px 16px 48px;
+    padding: 99px 10px 48px;
 }
 
 .admin-header {
@@ -2279,4 +2279,37 @@ nav {
     .court-photo {
         height: 190px;
     }
+}
+
+/* Full court detail page (court view) */
+.court-page {
+    max-width: 90rem;
+    margin: 96px auto 48px;
+    padding: 0 1rem;
+}
+
+.court-card.court-detail {
+    background: var(--court-panel, #fffdf8);
+    border: 1px solid var(--court-line, var(--border));
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--court-shadow-soft, var(--shadow-sm));
+}
+
+.court-back-link {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--green-800, inherit);
+    margin-bottom: 0.4rem;
+}
+
+.court-back-link:hover {
+    text-decoration: underline;
+}
+
+.review-date {
+    display: block;
+    color: var(--ink-400, #94a3b8);
+    font-size: 0.75rem;
 }

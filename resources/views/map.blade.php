@@ -10,6 +10,7 @@
             >
         </div>
 
+        {{-- Rating filter: only show courts rated at least this high --}}
         <div class="rating-filter-wrapper">
             <label for="ratingFilter">Rating</label>
             <select id="ratingFilter" aria-label="Filter courts by rating">
@@ -19,6 +20,17 @@
                 <option value="3">3+ stars</option>
                 <option value="2">2+ stars</option>
                 <option value="1">1+ stars</option>
+            </select>
+        </div>
+
+        {{-- Sort dropdown: re-orders the filtered courts --}}
+        <div class="rating-filter-wrapper">
+            <label for="sortFilter">Sort</label>
+            <select id="sortFilter" aria-label="Sort courts">
+                <option value="default">Default</option>
+                <option value="rating">Highest rated</option>
+                <option value="likes">Most liked</option>
+                <option value="newest">Newest</option>
             </select>
         </div>
     </div>
@@ -55,13 +67,15 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             maxZoom: 19,
         }).addTo(map);
-        
+
         const courtSearch = document.getElementById('courtSearch');
         const ratingFilter = document.getElementById('ratingFilter');
+        const sortFilter = document.getElementById('sortFilter');
         const requestedCourtId = new URLSearchParams(window.location.search).get('court');
         let allCourts = [];
         let currentSearchTerm = '';
         let currentRatingFilter = 'all';
+        let currentSort = 'default'; // active sort option
 
         function getCourtRating(court) {
             const rawRating = Number(court.avg_rating ?? court.rating ?? 0);
@@ -86,11 +100,31 @@
                 return matchesSearch && matchesRating;
             });
 
+            sortCourts(filteredCourts);
             renderCourts(filteredCourts);
+        }
+
+        // Orders the court list based on the selected sort option
+        function sortCourts(courts) {
+            if (currentSort === 'rating') {
+                courts.sort((a, b) => getCourtRating(b) - getCourtRating(a));
+            } else if (currentSort === 'likes') {
+                courts.sort((a, b) => Number(b.likes || 0) - Number(a.likes || 0));
+            } else if (currentSort === 'newest') {
+                // 'created_at' comes from Laravel as an ISO date string -
+                // string comparison works for ISO dates
+                courts.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+            }
+            // 'default' = leave the order as the server sent it
         }
 
         ratingFilter.addEventListener('change', function () {
             currentRatingFilter = this.value;
+            applyCourtFilters();
+        });
+
+        sortFilter.addEventListener('change', function () {
+            currentSort = this.value;
             applyCourtFilters();
         });
 
@@ -574,14 +608,15 @@
                 <p class="court-address"><strong>📍Address:</strong> ${escapeHtml(court.address || 'Not added')}</p>
                 <p class="court-city"><strong>🏙️City:</strong> ${escapeHtml(court.city || 'Not added')}</p>
                 <p class="court-coordinates"><strong>🧭Coordinates:</strong> ${escapeHtml(`${court.latitude}, ${court.longitude}`)}</p>
-                <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating > 0 ? averageRating.toFixed(1) : 'No rating'}${averageRating > 0 ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p>
+                <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating > 0 ? averageRating.toFixed(1) : 'No rating'}</p>
+                <a href="/courts/view/${court.id}" class="view-court-btn">Skatīt detalizētāk</a>
                 <div class="court-actions">
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="like">👍 Like (${court.likes || 0})</button>
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="dislike">👎 Dislike (${court.dislikes || 0})</button>
                     <button type="button" class="court-save-btn" data-court-id="${court.id}" data-saved="${court.is_saved ? 'true' : 'false'}">💾 ${court.is_saved ? 'Saved' : 'Save court'}</button>
                 </div>
                 <p class="court-description"><strong>📝Description:</strong> ${escapeHtml(court.description || 'No description yet.')}</p>
-                <div class="court-comments-header"><strong>💬Comments:</strong></div>
+                <div class="court-comments-header"><strong>💬Comments:</strong><p>${averageRating > 0 ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p></div>
                 <div class="court-comments">${reviewMarkup}</div>
                 <div class="court-review-form-wrap"></div>
                 @if(!auth()->check())

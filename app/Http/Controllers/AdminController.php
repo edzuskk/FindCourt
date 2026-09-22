@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Court;
+use App\Models\CourtReport;
 use App\Models\CourtReview;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -30,7 +31,12 @@ class AdminController extends Controller
             ->latest()
             ->get();
 
-        return view('admin.dashboard', compact('users', 'courts', 'courtReviews'));
+        $reports = CourtReport::query()
+            ->with(['court:id,name', 'user:id,username'])
+            ->latest()
+            ->get();
+
+        return view('admin.dashboard', compact('users', 'courts', 'courtReviews', 'reports'));
     }
 
     public function destroy(User $user)

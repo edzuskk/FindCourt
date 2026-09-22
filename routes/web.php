@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/courts/{court}/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'destroy'])->name('courts.reviews.destroy');
     Route::post('/courts/{court}/react', [App\Http\Controllers\CourtReviewController::class, 'react'])->middleware('throttle:60,1')->name('courts.react');
     Route::post('/courts/{court}/save', [App\Http\Controllers\SavedCourtController::class, 'toggle'])->name('courts.save');
+    Route::post('/courts/{court}/report', [App\Http\Controllers\CourtReportController::class, 'store'])->middleware('throttle:10,1')->name('courts.report');
     Route::get('/profile/edit', [App\Http\Controllers\SessionController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [App\Http\Controllers\SessionController::class, 'update'])->name('profile.update');
 });
@@ -30,6 +31,7 @@ Route::middleware('auth')->group(function () {
 Route::get('/map', [App\Http\Controllers\MarkerController::class, 'index'])->name('map.page');
 Route::get('/courts', [App\Http\Controllers\MarkerController::class, 'index'])->name('courts.index');
 Route::get('/courts/{court}/reviews', [App\Http\Controllers\CourtReviewController::class, 'index'])->name('courts.reviews.index');
+Route::get('/courts/view/{court}', [App\Http\Controllers\CourtViewController::class, 'show'])->name('courts.show');
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
 
@@ -38,6 +40,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'destroy'])->name('users.destroy');
     Route::delete('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'destroy'])->name('courts.destroy');
     Route::put('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'update'])->name('courts.update');
+    Route::patch('/reports/{report}', [App\Http\Controllers\CourtReportController::class, 'resolve'])->name('reports.resolve');
 });
 
 Route::get('/forgot-password', function () {

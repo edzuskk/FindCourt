@@ -185,6 +185,50 @@
                             @empty
                                 <tr>
                                     <td colspan="6" class="admin-empty-state">No court reviews found.</td>
+                                </tr>   
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            {{-- User reports about courts. Admin can mark them handled or delete the court. --}}
+            <section class="admin-panel">
+                <div class="admin-panel-header">Court Reports ({{ $reports->where('is_resolved', false)->count() }} open)</div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table admin-table-reports">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Court</th>
+                                <th>Reason</th>
+                                <th>Details</th>
+                                <th>Reported by</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($reports as $report)
+                                <tr>
+                                    <td>{{ $report->id }}</td>
+                                    <td>{{ $report->court?->name ?? 'Deleted court' }}</td>
+                                    <td>{{ ucfirst($report->reason) }}</td>
+                                    <td class="admin-review-comment">{{ $report->details ?: '—' }}</td>
+                                    <td>{{ $report->user?->username ?? 'Unknown user' }}</td>
+                                    <td>{{ $report->is_resolved ? '✅ Resolved' : '🟠 Open' }}</td>
+                                    <td>
+                                        @unless ($report->is_resolved)
+                                            <button type="button" class="resolve-report-btn" data-report-id="{{ $report->id }}">Mark handled</button>
+                                        @endunless
+                                        @if ($report->court)
+                                            <button type="button" class="delete-court-btn" data-court-id="{{ $report->court->id }}">Delete court</button>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="admin-empty-state">No reports yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -374,6 +418,41 @@
                     .catch((error) => {
                         console.error('Error deleting court:', error);
                         alert('Failed to delete court.');
+                    });
+                });
+            });
+
+            // Mark a report as handled
+            document.querySelectorAll('.resolve-report-btn').forEach((button) => {
+                button.addEventListener('click', function () {
+                    const reportId = this.dataset.reportId;
+
+                    if (!confirm('Mark this report as handled?')) {
+                        return;
+                    }
+
+                    fetch(`/admin/reports/${reportId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error('Server error: ' + response.status);
+                        }
+
+                        return response.json();
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error resolving report:', error);
+                        alert('Failed to resolve report.');
                     });
                 });
             });
