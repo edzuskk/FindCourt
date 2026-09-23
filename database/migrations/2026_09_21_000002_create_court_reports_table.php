@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('court_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('reason', 50);
-            $table->text('details')->nullable();
+            $table->string('reportReason', 50);
+            $table->text('reportComment')->nullable();
             $table->boolean('is_resolved')->default(false);
             $table->timestamps();
             $table->unique(['court_id', 'user_id']);

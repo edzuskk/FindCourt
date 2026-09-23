@@ -2313,3 +2313,13 @@ nav {
     color: var(--ink-400, #94a3b8);
     font-size: 0.75rem;
 }
+
+.report-court-btn{
+    width: 200px;
+    border-radius: 8px;
+    background: var(--court-ink);
+    color: var(--court-lime);
+    font-size: 0.85rem;
+    font-weight: 700;
+    height: 30px;
+}

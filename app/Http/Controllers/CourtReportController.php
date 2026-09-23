@@ -13,8 +13,8 @@ class CourtReportController extends Controller
     public function store(Request $request, Court $court): JsonResponse
     {
         $validated = $request->validate([
-            'reason'  => ['required', 'in:' . implode(',', CourtReport::REASONS)],
-            'details' => ['nullable', 'string', 'max:1000'],
+            'reportReason'  => ['required', 'in:' . implode(',', CourtReport::REASONS)],
+            'reportComment' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $alreadyReported = CourtReport::where('court_id', $court->id)
@@ -31,8 +31,8 @@ class CourtReportController extends Controller
         CourtReport::create([
             'court_id' => $court->id,
             'user_id'  => Auth::id(),
-            'reason'   => $validated['reason'],
-            'details'  => $validated['details'] ?? null,
+            'reportReason'   => $validated['reportReason'],
+            'reportComment'  => $validated['reportComment'] ?? null,
         ]);
 
         return response()->json([

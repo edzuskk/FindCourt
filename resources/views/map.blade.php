@@ -409,7 +409,7 @@
                 }
 
                 fetch(`/admin/courts/${court.id}`, {
-                    method: 'PUT',
+                    method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -575,6 +575,80 @@
             return form;
         }
 
+        function buildReportCard(court, report = {}) {
+            const form = document.createElement('form');
+
+            form.innerHTML = `
+                <div class="report-card-info"> 
+                    <div class="report-card-header">
+                        <p>What do you want to report about ${escapeHtml(court.name || 'this court')}?</p>
+                    </div>
+                    <div>
+                        <label for="reportReason">Reason</label>
+                        <select id="reportReason" name="reportReason">
+                            <option value="closed">Closed</option>
+                            <option value="duplicate">Duplicate</option>
+                            <option value="unsafe">Unsafe</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="reportComment">Comment</label>
+                        <textarea id="reportComment" name="reportComment" placeholder="Tell us more (optional)"></textarea>
+                    </div>
+                    <button type="submit">Report</button>
+                </div>
+            `;
+
+            form.querySelector('#reportReason').value = report.reason || '';
+            form.querySelector('#reportComment').value = report.comment || '';
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const reason = form.querySelector('#reportReason').value;
+                const comment = form.querySelector('#reportComment').value;
+
+                if (!reason) {
+                    alert('Please choose a reason before reporting the court.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('reportReason', reason);
+                formData.append('reportComment', comment);
+
+                fetch(`/courts/${court.id}/report`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    return response.json().catch(() => ({})).then(data => {
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Could not report the court.');
+                        }
+                        return data;
+                    });
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Thank you! The report was sent to the admins.');
+                        closeSidebar();
+                    }
+                })
+                .catch(error => {
+                    alert(error.message);
+                    console.error('Error reporting court:', error);
+                });
+            });
+
+            return form;
+        }
+
         function buildCourtCard(court) {
             const card = document.createElement('div');
             card.className = 'court-card';
@@ -603,12 +677,14 @@
             }
 
             card.innerHTML = `
+                <button type="button" class="report-court-btn" data-court-id="${court.id}">🚩Report court</button>
                 <h3>${escapeHtml(court.name || 'Untitled Court')}</h3>
                 ${court.photo ? `<img src="${escapeHtml(resolvePhotoUrl(court.photo))}" alt="Court photo" class="court-photo">` : ''}
                 <p class="court-address"><strong>📍Address:</strong> ${escapeHtml(court.address || 'Not added')}</p>
                 <p class="court-city"><strong>🏙️City:</strong> ${escapeHtml(court.city || 'Not added')}</p>
                 <p class="court-coordinates"><strong>🧭Coordinates:</strong> ${escapeHtml(`${court.latitude}, ${court.longitude}`)}</p>
                 <p class="court-rating"><strong>⭐Average rating:</strong> ${averageRating > 0 ? averageRating.toFixed(1) : 'No rating'}</p>
+                <p class="when-added"><strong>Added:</strong> ${court.created_at ? new Date(court.created_at).toLocaleString() : 'Unknown'}</p>
                 <a href="/courts/view/${court.id}" class="view-court-btn">Skatīt detalizētāk</a>
                 <div class="court-actions">
                     <button type="button" class="reaction-btn" data-court-id="${court.id}" data-reaction="like">👍 Like (${court.likes || 0})</button>
@@ -628,6 +704,7 @@
                 @endif
             `;
             
+            const reportButton = card.querySelector('.report-court-btn');
             const reviewFormWrap = card.querySelector('.court-review-form-wrap');
             const reactionButtons = card.querySelectorAll('.reaction-btn');
             const saveButtons = card.querySelectorAll('.court-save-btn');
@@ -635,6 +712,17 @@
             const deleteReviewButtons = card.querySelectorAll('.delete-review-btn');
             const editButton = card.querySelector('.edit-court-btn');
             const deleteButton = card.querySelector('.delete-court-btn');
+
+            if(reportButton) {
+                reportButton.addEventListener('click', function() {
+                    if (!canAddCourt) {
+                        alert('Please log in or register to report a court.');
+                        return;
+                    }
+
+                    showSidebar('Report court', buildReportCard(court));
+                });
+            }
 
             editReviewButtons.forEach(button => {
                 button.addEventListener('click', function() {

@@ -192,7 +192,6 @@
                 </div>
             </section>
 
-            {{-- User reports about courts. Admin can mark them handled or delete the court. --}}
             <section class="admin-panel">
                 <div class="admin-panel-header">Court Reports ({{ $reports->where('is_resolved', false)->count() }} open)</div>
                 <div class="admin-table-wrap">
@@ -213,15 +212,15 @@
                                 <tr>
                                     <td>{{ $report->id }}</td>
                                     <td>{{ $report->court?->name ?? 'Deleted court' }}</td>
-                                    <td>{{ ucfirst($report->reason) }}</td>
-                                    <td class="admin-review-comment">{{ $report->details ?: '—' }}</td>
+                                    <td>{{ ucfirst($report->reportReason) }}</td>
+                                    <td class="admin-review-comment">{{ $report->reportComment?: '—' }}</td>
                                     <td>{{ $report->user?->username ?? 'Unknown user' }}</td>
                                     <td>{{ $report->is_resolved ? '✅ Resolved' : '🟠 Open' }}</td>
                                     <td>
-                                        @unless ($report->is_resolved)
+                                        @if ($report->is_resolved)
+                                            <button type="button" class="delete-report">Delete review</button>
+                                        @elseif ($report->is_resolved == false)
                                             <button type="button" class="resolve-report-btn" data-report-id="{{ $report->id }}">Mark handled</button>
-                                        @endunless
-                                        @if ($report->court)
                                             <button type="button" class="delete-court-btn" data-court-id="{{ $report->court->id }}">Delete court</button>
                                         @endif
                                     </td>

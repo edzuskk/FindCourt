@@ -12,8 +12,8 @@ class CourtReport extends Model
     protected $fillable = [
         'court_id',
         'user_id',
-        'reason',
-        'details',
+        'reportReason',
+        'reportComment',
         'is_resolved',
     ];
 
