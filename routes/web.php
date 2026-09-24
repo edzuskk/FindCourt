@@ -41,6 +41,7 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::delete('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'destroy'])->name('courts.destroy');
     Route::put('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'update'])->name('courts.update');
     Route::patch('/reports/{report}', [App\Http\Controllers\CourtReportController::class, 'resolve'])->name('reports.resolve');
+    Route::delete('/reports/{report}', [App\Http\Controllers\CourtReportController::class, 'destroy'])->name('reports.destroy');
 });
 
 Route::get('/forgot-password', function () {

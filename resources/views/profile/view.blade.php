@@ -152,7 +152,7 @@
                 @endif
             </div>
 
-            {{-- <div style="margin-top: 24px;">
+            <div style="margin-top: 24px;">
                 <div style="background: #ffffff; border: 1px solid #d7ddd8; border-radius: 16px; padding: 20px;">
                 <h2 style="margin-top: 0; margin-bottom: 16px;">Your reported Courts</h2>
 
@@ -160,8 +160,8 @@
                     <p style="margin: 0; color: #4a4f4b;">You haven’t reported any courts.</p>
                 @else
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
-                        @foreach ($user->savedCourts as $court)
-                            <div @if ($loop->index >= 3) data-extra-item="saved-courts" style="display: none; border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @else style="border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @endif>
+                        @foreach ($user->reportedCourts as $court)
+                            <div @if ($loop->index >= 3) data-extra-item="reported-courts" style="display: none; border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @else style="border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @endif>
                                 @if ($court->photo)
                                     <img src="{{ asset('storage/' . $court->photo) }}" alt="Court photo" style="width: 100%; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;">
                                 @endif
@@ -179,16 +179,13 @@
                                     🗺️See on map
                                 </a>
                                 <div style="color: #6b736e; font-size: 0.85rem; margin-top: 4px;">
-                                    Saved {{ $court->pivot?->created_at?->format('M d, Y') ?? 'recently' }}
+                                    Reported {{ $court->pivot?->created_at?->format('M d, Y') ?? 'recently' }}
                                 </div>
                             </div>
                         @endforeach
                     </div>
-                    @if ($user->savedCourts->count() > 3)
-                        <button type="button" onclick="showMoreItems('saved-courts', this)" style="margin-top: 14px; padding: 10px 16px; border: 0; border-radius: 8px; background: #17251f; color: #c7f36a; font: inherit; font-weight: 700; cursor: pointer;">See more</button>
-                    @endif
                 @endif
-            </div> --}}
+            </div>
 
         </div>
     </div>

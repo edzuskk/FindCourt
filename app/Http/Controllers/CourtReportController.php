@@ -47,4 +47,11 @@ class CourtReportController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    public function destroy(CourtReport $report): JsonResponse
+    {
+        $report->delete();
+
+        return response()->json(['success' => true]);
+    }
 }

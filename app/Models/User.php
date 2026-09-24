@@ -46,4 +46,11 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Court::class, 'saved_courts');
     }
+
+    public function reportedCourts(): BelongsToMany
+    {
+        return $this->belongsToMany(Court::class, 'court_reports', 'user_id', 'court_id')
+            ->withPivot('created_at')
+            ->distinct();
+    }
 }

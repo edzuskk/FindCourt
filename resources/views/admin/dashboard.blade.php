@@ -131,11 +131,14 @@
                                             data-address="{{ $court->address ?? '' }}"
                                             data-city="{{ $court->city ?? '' }}"
                                             data-state="{{ $court->state ?? '' }}"
-                                            data-description="{{ $court->description ?? '' }}"
-                                        >
-                                            Edit
+                                            data-description="{{ $court->description ?? '' }}">Edit
                                         </button>
                                         <button type="button" class="delete-court-btn" data-court-id="{{ $court->id }}">Delete</button>
+                                        <a
+                                            href="{{ route('map') }}?court={{ $court->id }}"
+                                            style="display: inline-block; color: #6b736e; font-size: 0.85rem; margin-top: 4px; cursor: pointer; text-decoration: none;">
+                                            🗺️See on map
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
@@ -218,7 +221,7 @@
                                     <td>{{ $report->is_resolved ? '✅ Resolved' : '🟠 Open' }}</td>
                                     <td>
                                         @if ($report->is_resolved)
-                                            <button type="button" class="delete-report">Delete review</button>
+                                            <button type="button" class="delete-report-btn" data-report-id="{{ $report->id }}">Delete review</button>
                                         @elseif ($report->is_resolved == false)
                                             <button type="button" class="resolve-report-btn" data-report-id="{{ $report->id }}">Mark handled</button>
                                             <button type="button" class="delete-court-btn" data-court-id="{{ $report->court->id }}">Delete court</button>
@@ -417,6 +420,42 @@
                     .catch((error) => {
                         console.error('Error deleting court:', error);
                         alert('Failed to delete court.');
+                    });
+                });
+            });
+
+            document.querySelectorAll('.delete-report-btn').forEach((button) => {
+                button.addEventListener('click', function () {
+                    const reportId = this.dataset.reportId;
+
+                    if (!confirm('Delete this report?')) {
+                        return;
+                    }
+
+                    fetch(`/admin/reports/${reportId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(async (response) => {
+                        const data = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Server error: ' + response.status);
+                        }
+
+                        return data;
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error deleting report:', error);
+                        alert(error.message || 'Failed to delete report.');
                     });
                 });
             });
