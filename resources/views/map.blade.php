@@ -649,6 +649,77 @@
             return form;
         }
 
+        function buildReviewReportCard(review) {
+            const form = document.createElement('form');
+
+            form.innerHTML = `
+                <div class="report-card-info">
+                    <div class="report-card-header">
+                        <p>What do you want to report about this review?</p>
+                    </div>
+                    <div>
+                        <label for="reviewReportReason">Reason</label>
+                        <select id="reviewReportReason" name="reportReason">
+                            <option value="spam">Spam</option>
+                            <option value="inappropriate">Inappropriate</option>
+                            <option value="false information">False information</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="reviewReportComment">Comment</label>
+                        <textarea id="reviewReportComment" name="reportComment" placeholder="Tell us more (optional)"></textarea>
+                    </div>
+                    <button type="submit">Report</button>
+                </div>
+            `;
+
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                const reason = form.querySelector('#reviewReportReason').value;
+                const comment = form.querySelector('#reviewReportComment').value;
+
+                if (!reason) {
+                    alert('Please choose a reason before reporting the review.');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('reportReason', reason);
+                formData.append('reportComment', comment);
+
+                fetch(`/reviews/${review.id}/report`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
+                .then(response => {
+                    return response.json().catch(() => ({})).then(data => {
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Could not report the review.');
+                        }
+                        return data;
+                    });
+                })
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message || 'Thank you! The report was sent to the admins.');
+                        closeSidebar();
+                    }
+                })
+                .catch(error => {
+                    alert(error.message);
+                    console.error('Error reporting review:', error);
+                });
+            });
+
+            return form;
+        }
+
         function buildCourtCard(court) {
             const card = document.createElement('div');
             card.className = 'court-card';
@@ -658,6 +729,8 @@
                 review.is_owner || (currentUserId && Number(review.user_id) === Number(currentUserId))
             );
             const totalReviews = reviews.length;
+            const isAdmin = @json(auth()->check() && auth()->user()->is_admin == 1);
+            const canReport = canAddCourt && !isAdmin;
             const calculatedAverage = reviews.length ? (reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length) : 0;
             const averageRating = Number(court.avg_rating ?? calculatedAverage ?? 0);
 
@@ -672,6 +745,8 @@
                         ${review.photo ? `<img src="${escapeHtml(resolvePhotoUrl(review.photo))}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
                         <p>${escapeHtml(review.comment || 'No comment provided.')} </p>
                         ${(review.is_owner || (currentUserId && Number(review.user_id) === Number(currentUserId))) ? `<button type="button" class="edit-review-btn" data-review-id="${review.id}">Edit review</button><button type="button" class="delete-review-btn" data-review-id="${review.id}">Delete review</button>` : ''}
+                        ${canReport ? `<button type="button" class="report-review-btn" data-review-id="${review.id}">🚩Report review</button>` : ''}
+                        ${isAdmin ? `<button type="button" class="admin-edit-review-btn" data-review-id="${review.id}">✏️Edit</button><button type="button" class="admin-delete-review-btn" data-review-id="${review.id}">🗑️Delete</button>` : ''}
                     </div>
                 `).join('');
             }
@@ -731,6 +806,69 @@
                     if (review) {
                         showSidebar('Edit review', buildReviewForm(court.id, review));
                     }
+                });
+            });
+
+            const reportReviewButtons = card.querySelectorAll('.report-review-btn');
+            const adminEditReviewButtons = card.querySelectorAll('.admin-edit-review-btn');
+            const adminDeleteReviewButtons = card.querySelectorAll('.admin-delete-review-btn');
+
+            reportReviewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const review = reviews.find(item => String(item.id) === button.dataset.reviewId);
+
+                    if (review) {
+                        showSidebar('Report review', buildReviewReportCard(review));
+                    }
+                });
+            });
+
+            adminEditReviewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const review = reviews.find(item => String(item.id) === button.dataset.reviewId);
+
+                    if (review) {
+                        showSidebar('Edit review (admin)', buildReviewForm(court.id, review));
+                    }
+                });
+            });
+
+            adminDeleteReviewButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const review = reviews.find(item => String(item.id) === button.dataset.reviewId);
+
+                    if (!review || !confirm('Delete this review as admin?')) {
+                        return;
+                    }
+
+                    fetch(`/courts/${court.id}/reviews/${review.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Server error: ' + response.status);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                loadCourts();
+                                fetch(`/courts/${court.id}/reviews`)
+                                    .then(reviewResponse => reviewResponse.json())
+                                    .then(reviewData => showSidebar('Court details', buildCourtCard({
+                                        ...reviewData.court,
+                                        reviews: reviewData.reviews || [],
+                                        avg_rating: reviewData.court?.rating ?? 0
+                                    })));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error deleting review as admin:', error);
+                        });
                 });
             });
 

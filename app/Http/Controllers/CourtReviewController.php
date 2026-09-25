@@ -29,9 +29,18 @@ class CourtReviewController extends Controller
             'court' => [
                 'id' => $court->id,
                 'name' => $court->name,
+                'address' => $court->address,
+                'city' => $court->city,
+                'state' => $court->state,
+                'description' => $court->description,
+                'photo' => $court->photo,
+                'latitude' => $court->latitude,
+                'longitude' => $court->longitude,
+                'created_at' => $court->created_at,
                 'likes' => $court->likes,
                 'dislikes' => $court->dislikes,
                 'rating' => $court->rating,
+                'avg_rating' => $court->rating,
             ],
             'reviews' => $reviews,
         ]);
@@ -83,7 +92,8 @@ class CourtReviewController extends Controller
     public function update(Request $request, Court $court, CourtReview $review)
     {
         abort_unless($review->court_id === $court->id, 404);
-        abort_unless($review->user_id === Auth::id(), 403);
+        $isAdmin = Auth::user()->is_admin == 1;
+        abort_unless($review->user_id === Auth::id() || $isAdmin, 403);
 
         $validated = $request->validate([
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
@@ -123,7 +133,7 @@ class CourtReviewController extends Controller
     public function destroy(Court $court, CourtReview $review)
     {
         abort_unless($review->court_id === $court->id, 404);
-        abort_unless($review->user_id === Auth::id(), 403);
+        abort_unless($review->user_id === Auth::id() || Auth::user()->is_admin == 1, 403);
 
         if ($review->photo) {
             Storage::disk('public')->delete($review->photo);

@@ -237,6 +237,56 @@
                     </table>
                 </div>
             </section>
+            <section class="admin-panel">
+                <div class="admin-panel-header">Review Reports ({{ $reviewReports->where('is_resolved', false)->count() }} open)</div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table admin-table-reports">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Review</th>
+                                <th>Reason</th>
+                                <th>Details</th>
+                                <th>Reported by</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($reviewReports as $report)
+                                <tr>
+                                    <td>{{ $report->id }}</td>
+                                    <td>
+                                        @if ($report->review)
+                                            <strong>{{ $report->review->username }}</strong>
+                                            — {{ Str::limit($report->review->comment ?? '(no comment)', 60) }}
+                                            ({{ $report->review->court?->name ?? 'Deleted court' }})
+                                        @else
+                                            Deleted review
+                                        @endif
+                                    </td>
+                                    <td>{{ ucfirst($report->reportReason) }}</td>
+                                    <td class="admin-review-comment">{{ $report->reportComment ?: '—' }}</td>
+                                    <td>{{ $report->user?->username ?? 'Unknown user' }}</td>
+                                    <td>{{ $report->is_resolved ? '✅ Resolved' : '🟠 Open' }}</td>
+                                    <td>
+                                        @if ($report->is_resolved)
+                                            <button type="button" class="delete-review-report-btn" data-report-id="{{ $report->id }}">Delete</button>
+                                        @else
+                                            <button type="button" class="resolve-review-report-btn" data-report-id="{{ $report->id }}">Mark handled</button>
+                                            <button type="button" class="delete-review-report-btn" data-report-id="{{ $report->id }}">Delete</button>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="admin-empty-state">No review reports yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </div>
     </div>
 
@@ -491,6 +541,78 @@
                     .catch((error) => {
                         console.error('Error resolving report:', error);
                         alert('Failed to resolve report.');
+                    });
+                });
+            });
+
+            // Mark a review report as handled
+            document.querySelectorAll('.resolve-review-report-btn').forEach((button) => {
+                button.addEventListener('click', function () {
+                    const reportId = this.dataset.reportId;
+
+                    if (!confirm('Mark this review report as handled?')) {
+                        return;
+                    }
+
+                    fetch(`/admin/review-reports/${reportId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error('Server error: ' + response.status);
+                        }
+
+                        return response.json();
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error resolving review report:', error);
+                        alert('Failed to resolve review report.');
+                    });
+                });
+            });
+
+            // Delete a review report
+            document.querySelectorAll('.delete-review-report-btn').forEach((button) => {
+                button.addEventListener('click', function () {
+                    const reportId = this.dataset.reportId;
+
+                    if (!confirm('Delete this review report?')) {
+                        return;
+                    }
+
+                    fetch(`/admin/review-reports/${reportId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(async (response) => {
+                        const data = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Server error: ' + response.status);
+                        }
+
+                        return data;
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error deleting review report:', error);
+                        alert(error.message || 'Failed to delete review report.');
                     });
                 });
             });
