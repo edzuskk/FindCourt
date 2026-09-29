@@ -50,7 +50,7 @@ class User extends Authenticatable
     public function reportedCourts(): BelongsToMany
     {
         return $this->belongsToMany(Court::class, 'court_reports', 'user_id', 'court_id')
-            ->withPivot('created_at')
-            ->distinct();
+            ->withPivot('id', 'created_at', 'is_resolved')
+            ->orderBy('court_reports.created_at', 'desc');
     }
 }

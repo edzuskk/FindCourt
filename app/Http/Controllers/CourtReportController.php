@@ -95,6 +95,22 @@ class CourtReportController extends Controller
         return response()->json(['success' => true]);
     }
 
+    public function cancel(CourtReport $report): JsonResponse
+    {
+        abort_unless($report->user_id === Auth::id(), 403);
+
+        if ($report->is_resolved) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This report was already handled and cannot be cancelled.',
+            ], 422);
+        }
+
+        $report->delete();
+
+        return response()->json(['success' => true, 'message' => 'Report cancelled.']);
+    }
+
     public function destroy(CourtReport $report): JsonResponse
     {
         $report->delete();

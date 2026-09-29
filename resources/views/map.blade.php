@@ -10,7 +10,6 @@
             >
         </div>
 
-        {{-- Rating filter: only show courts rated at least this high --}}
         <div class="rating-filter-wrapper">
             <label for="ratingFilter">Rating</label>
             <select id="ratingFilter" aria-label="Filter courts by rating">
@@ -23,7 +22,33 @@
             </select>
         </div>
 
-        {{-- Sort dropdown: re-orders the filtered courts --}}
+        <div class="rating-filter-wrapper">
+            <label for="cityFilter">City</label>
+            <select id="cityFilter" aria-label="Filter courts by city">
+                <option value="all">All cities</option>
+                @foreach($courts->pluck('city')->filter()->sort()->unique() as $city)
+                    <option value="{{ $city }}">{{ $city }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="rating-filter-wrapper">
+            <label for="stateFilter">State</label>
+            <select id="stateFilter" aria-label="Filter courts by state">
+                <option value="all">All states</option>
+                @foreach($courts->pluck('state')->filter()->sort()->unique() as $state)
+                    <option value="{{ $state }}">{{ $state }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        @auth
+        <div class="rating-filter-wrapper" style="display: flex; align-items: center; gap: 6px;">
+            <input type="checkbox" id="savedOnlyFilter" aria-label="Only saved courts">
+            <label for="savedOnlyFilter" style="margin: 0;">⭐ Only saved</label>
+        </div>
+        @endauth
+
         <div class="rating-filter-wrapper">
             <label for="sortFilter">Sort</label>
             <select id="sortFilter" aria-label="Sort courts">
@@ -75,7 +100,10 @@
         let allCourts = [];
         let currentSearchTerm = '';
         let currentRatingFilter = 'all';
-        let currentSort = 'default'; // active sort option
+        let currentSort = 'default';
+        let currentCityFilter = 'all';
+        let currentStateFilter = 'all';
+        let savedOnly = false;
 
         function getCourtRating(court) {
             const rawRating = Number(court.avg_rating ?? court.rating ?? 0);
@@ -96,26 +124,25 @@
 
                 const matchesSearch = term === '' || searchable.includes(term);
                 const matchesRating = currentRatingFilter === 'all' || getCourtRating(court) >= Number(currentRatingFilter);
+                const matchesCity = currentCityFilter === 'all' || (court.city || '').toLowerCase() === currentCityFilter.toLowerCase();
+                const matchesState = currentStateFilter === 'all' || (court.state || '').toLowerCase() === currentStateFilter.toLowerCase();
+                const matchesSaved = !savedOnly || court.is_saved;
 
-                return matchesSearch && matchesRating;
+                return matchesSearch && matchesRating && matchesCity && matchesState && matchesSaved;
             });
 
             sortCourts(filteredCourts);
             renderCourts(filteredCourts);
         }
 
-        // Orders the court list based on the selected sort option
         function sortCourts(courts) {
             if (currentSort === 'rating') {
                 courts.sort((a, b) => getCourtRating(b) - getCourtRating(a));
             } else if (currentSort === 'likes') {
                 courts.sort((a, b) => Number(b.likes || 0) - Number(a.likes || 0));
             } else if (currentSort === 'newest') {
-                // 'created_at' comes from Laravel as an ISO date string -
-                // string comparison works for ISO dates
                 courts.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
             }
-            // 'default' = leave the order as the server sent it
         }
 
         ratingFilter.addEventListener('change', function () {
@@ -127,6 +154,31 @@
             currentSort = this.value;
             applyCourtFilters();
         });
+
+        const cityFilter = document.getElementById('cityFilter');
+        const stateFilter = document.getElementById('stateFilter');
+        const savedOnlyFilter = document.getElementById('savedOnlyFilter');
+
+        if (cityFilter) {
+            cityFilter.addEventListener('change', function () {
+                currentCityFilter = this.value;
+                applyCourtFilters();
+            });
+        }
+
+        if (stateFilter) {
+            stateFilter.addEventListener('change', function () {
+                currentStateFilter = this.value;
+                applyCourtFilters();
+            });
+        }
+
+        if (savedOnlyFilter) {
+            savedOnlyFilter.addEventListener('change', function () {
+                savedOnly = this.checked;
+                applyCourtFilters();
+            });
+        }
 
         courtSearch.addEventListener('input', function () {
             currentSearchTerm = this.value;

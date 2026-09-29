@@ -1,200 +1,200 @@
-<x-layout>
-    <div style="margin-top: 50px">
-    <div style="max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
-            <h1 style="margin: 0;">Your profile</h1>
-            <a href="{{ route('profile.edit') }}" class="edit-profile">Edit profile</a>
+﻿<x-layout>
+    <main class="profile-page">
+        <div class="profile-header">
+            <h1>Your profile</h1>
+            <a href="{{ route('profile.edit') }}" class="btn-edit">✏️ Edit profile</a>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 32px;">
-            <div style="background: #f5f7f4; border: 1px solid #d7ddd8; border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px;">
-                @if ($user->photo == null)
-                    <img src="{{ asset('images/Default_pfp.jpg') }}" alt="Profile Picture" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid #c9d2cc;">
-                @else
-                    <img src="{{ asset('storage/' . $user->photo) }}" alt="Profile Picture" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid #c9d2cc;">
-                @endif
+        <div class="profile-hero">
+            <div class="card card-soft profile-identity">
+                <img
+                    src="{{ $user->photo ? asset('storage/' . $user->photo) : asset('images/Default_pfp.jpg') }}"
+                    alt="Profile picture" class="avatar">
 
                 <div>
-                    @if (auth()->user()->is_admin == 1)
-                        <div style="font-size: 1.4rem; font-weight: 700;">
-                            {{ $user->username }} 👑
-                        </div>
-                    @else
-                        <div style="font-size: 1.4rem; font-weight: 700;">
-                            {{ $user->username }}
-                        </div>
-                    @endif
-
-                    <div style="color: #4a4f4b;">
-                        {{ $user->email }}
+                    <div class="profile-name">
+                        {{ $user->username }}@if (auth()->user()->is_admin == 1) 👑 @endif
                     </div>
+                    <div class="profile-email">{{ $user->email }}</div>
                 </div>
             </div>
 
-            <div style="background: #f5f7f4; border: 1px solid #d7ddd8; border-radius: 16px; padding: 20px;">
-                <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b736e; margin-bottom: 8px;">Profile stats</div>
-                <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-                    <div>
-                        <div style="font-size: 1.6rem; font-weight: 700;">{{ $user->courts->count() }}</div>
-                        <div style="color: #4a4f4b;">Courts</div>
+            <div class="card card-soft">
+                <div class="stats-label">Profile stats</div>
+                <div class="stats-row">
+                    <div class="stat">
+                        <div class="stat-value">{{ $user->courts->count() }}</div>
+                        <div class="stat-label">Courts</div>
                     </div>
-                    <div>
-                        <div style="font-size: 1.6rem; font-weight: 700;">{{ $user->reviews->count() }}</div>
-                        <div style="color: #4a4f4b;">Reviews</div>
+                    <div class="stat">
+                        <div class="stat-value">{{ $user->reviews->count() }}</div>
+                        <div class="stat-label">Reviews</div>
                     </div>
-                    <div>
-                        <div style="font-size: 1.6rem; font-weight: 700;">{{ $user->savedCourts->count() }}</div>
-                        <div style="color: #4a4f4b;">Courts Saved</div>
+                    <div class="stat">
+                        <div class="stat-value">{{ $user->savedCourts->count() }}</div>
+                        <div class="stat-label">Saved</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
-            <div style="background: #ffffff; border: 1px solid #d7ddd8; border-radius: 16px; padding: 20px;">
-                <h2 style="margin-top: 0; margin-bottom: 16px;">My added courts</h2>
+        <div class="section-grid">
+            <div class="card">
+                <h2>🏀 My added courts</h2>
 
                 @if ($user->courts->isEmpty())
-                    <p style="margin: 0; color: #4a4f4b;">You haven’t added any courts yet.</p>
+                    <p class="empty-note">You haven’t added any courts yet.</p>
                 @else
-                    <div style="display: flex; flex-direction: column; gap: 14px;">
-                        @foreach ($user->courts as $court)
-                            <div @if ($loop->index >= 3) data-extra-item="added-courts" style="display: none; border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @else style="border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @endif>
-                                @if ($court->photo)
-                                    <img src="{{ asset('storage/' . $court->photo) }}" alt="Court photo" style="width: 100%; max-height: 160px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;">
-                                @endif
+                    @foreach ($user->courts as $court)
+                        <div class="item" @if ($loop->index >= 3) hidden data-extra-item="added-courts" @endif>
+                            @if ($court->photo)
+                                <img src="{{ asset('storage/' . $court->photo) }}" alt="Court photo" class="item-photo">
+                            @endif
 
-                                <div style="font-weight: 700; font-size: 1.05rem;">{{ $court->name ?: 'Untitled court' }}</div>
-                                <div style="color: #4a4f4b; margin-top: 4px;">{{ $court->city }}, {{ $court->state }}</div>
-                                <a
-                                    href="{{ route('map') }}?court={{ $court->id }}"
-                                    style="display: inline-block; color: #6b736e; font-size: 0.85rem; margin-top: 4px; cursor: pointer; text-decoration: none;">
-                                    🗺️See on map
-                                </a>
-                                <div style="color: #6b736e; font-size: 0.85rem; margin-top: 8px;">🗓️Added {{ $court->created_at?->format('M d, Y') ?? 'recently' }}</div>
-                            </div>
-                        @endforeach
-                    </div>
+                            <div class="item-title">{{ $court->name ?: 'Untitled court' }}</div>
+                            <div class="item-sub">{{ $court->city }}{{ $court->state ? ', ' . $court->state : '' }}</div>
+
+                            <a href="{{ route('map') }}?court={{ $court->id }}" class="item-link">🗺️ See on map</a>
+
+                            <div class="item-meta">📅 Added {{ $court->created_at?->format('M d, Y') ?? 'recently' }}</div>
+                        </div>
+                    @endforeach
+
                     @if ($user->courts->count() > 3)
-                        <button type="button" onclick="showMoreItems('added-courts', this)" style="margin-top: 14px; padding: 10px 16px; border: 0; border-radius: 8px; background: #17251f; color: #c7f36a; font: inherit; font-weight: 700; cursor: pointer;">See more</button>
+                        <button type="button" class="btn-show-more" onclick="showMoreItems('added-courts', this)" data-expanded="false">Show more</button>
                     @endif
                 @endif
             </div>
 
-            <div style="background: #ffffff; border: 1px solid #d7ddd8; border-radius: 16px; padding: 20px;">
-                <h2 style="margin-top: 0; margin-bottom: 16px;">My reviews</h2>
+            <div class="card">
+                <h2>💬 My reviews</h2>
 
                 @if ($user->reviews->isEmpty())
-                    <p style="margin: 0; color: #4a4f4b;">You haven’t written any reviews yet.</p>
+                    <p class="empty-note">You haven’t written any reviews yet.</p>
                 @else
-                    <div style="display: flex; flex-direction: column; gap: 14px;">
-                        @foreach ($user->reviews as $review)
-                            <div @if ($loop->index >= 3) data-extra-item="reviews" style="display: none; border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @else style="border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @endif>
-                                <div style="font-weight: 700; margin-bottom: 4px;">{{ $review->court?->name ?? 'Court' }}</div>
-                                <div style="color: #6b736e; font-size: 0.85rem; margin-bottom: 8px;">{{ $review->created_at?->format('M d, Y') ?? 'recently' }}</div>
-
+                    @foreach ($user->reviews as $review)
+                        <div class="item" @if ($loop->index >= 3) hidden data-extra-item="reviews" @endif>
+                            <div class="review-head">
+                                <span class="item-title">{{ $review->court?->name ?? 'Court' }}</span>
                                 @if ($review->rating)
-                                    <div style="margin-bottom: 8px;">Rating: {{ $review->rating }}/5</div>
-                                @endif
-
-                                @if ($review->comment)
-                                    <div style="color: #2f352f; line-height: 1.5;">{{ $review->comment }}</div>
-                                @endif
-
-                                @if ($review->photo)
-                                    <img src="{{ asset('storage/' . $review->photo) }}" alt="Review photo" style="width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; margin-top: 10px;">
+                                    <span class="rating">⭐ {{ $review->rating }}/5</span>
                                 @endif
                             </div>
-                        @endforeach
-                    </div>
+
+                            <div class="item-sub">{{ $review->created_at?->format('M d, Y') ?? 'Recently' }}</div>
+
+                            @if ($review->comment)
+                                <p class="review-comment">{{ $review->comment }}</p>
+                            @endif
+
+                            @if ($review->photo)
+                                <img src="{{ asset('storage/' . $review->photo) }}" alt="Review photo" class="item-photo" style="margin-top: 10px;">
+                            @endif
+                        </div>
+                    @endforeach
+
                     @if ($user->reviews->count() > 3)
-                        <button type="button" onclick="showMoreItems('reviews', this)" style="margin-top: 14px; padding: 10px 16px; border: 0; border-radius: 8px; background: #17251f; color: #c7f36a; font: inherit; font-weight: 700; cursor: pointer;">See more</button>
+                        <button type="button" class="btn-show-more" onclick="showMoreItems('reviews', this)" data-expanded="false">Show more</button>
                     @endif
                 @endif
             </div>
         </div>
-        
-        <div style="margin-top: 24px;">
-            <div style="background: #ffffff; border: 1px solid #d7ddd8; border-radius: 16px; padding: 20px;">
-                <h2 style="margin-top: 0; margin-bottom: 16px;">Your Saved Courts</h2>
+
+        <div class="section-full">
+            <div class="card">
+                <h2>⭐ Your saved courts</h2>
 
                 @if ($user->savedCourts->isEmpty())
-                    <p style="margin: 0; color: #4a4f4b;">You haven’t saved any courts yet.</p>
+                    <p class="empty-note">You haven’t saved any courts yet.</p>
                 @else
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+                    <div class="item-grid">
                         @foreach ($user->savedCourts as $court)
-                            <div @if ($loop->index >= 3) data-extra-item="saved-courts" style="display: none; border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @else style="border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @endif>
+                            <div class="item" @if ($loop->index >= 3) hidden data-extra-item="saved-courts" @endif>
                                 @if ($court->photo)
-                                    <img src="{{ asset('storage/' . $court->photo) }}" alt="Court photo" style="width: 100%; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;">
+                                    <img src="{{ asset('storage/' . $court->photo) }}" alt="Court photo" class="item-photo">
                                 @endif
 
-                                <div style="font-weight: 700; font-size: 1.05rem;">{{ $court->name ?: 'Untitled court' }}</div>
-                                <div style="color: #4a4f4b; margin-top: 4px;">
-                                    {{ $court->city ?: 'Unknown city' }}{{ $court->state ? ', ' . $court->state : '' }}
+                                <div class="item-title">{{ $court->name ?: 'Untitled court' }}</div>
+                                <div class="item-sub">{{ $court->city ?: 'Unknown city' }}{{ $court->state ? ', ' . $court->state : '' }}</div>
+
+                                <div style="margin-top: 10px;">
+                                    <span class="rating">⭐ {{ $court->rating ? number_format($court->rating, 1) : 'No rating yet' }}</span>
                                 </div>
-                                <div style="color: #6b736e; font-size: 0.85rem; margin-top: 8px;">
-                                    ⭐ {{ $court->rating ? number_format($court->rating, 1) : 'No rating yet' }}
-                                </div>
-                                <a
-                                    href="{{ route('map') }}?court={{ $court->id }}"
-                                    style="display: inline-block; color: #6b736e; font-size: 0.85rem; margin-top: 4px; cursor: pointer; text-decoration: none;">
-                                    🗺️See on map
-                                </a>
-                                <div style="color: #6b736e; font-size: 0.85rem; margin-top: 4px;">
-                                    Saved {{ $court->pivot?->created_at?->format('M d, Y') ?? 'recently' }}
-                                </div>
+
+                                <a href="{{ route('map') }}?court={{ $court->id }}" class="item-link">🗺️ See on map</a>
+
+                                <div class="item-meta">Saved {{ $court->pivot?->created_at?->format('M d, Y') ?? 'recently' }}</div>
                             </div>
                         @endforeach
                     </div>
+
                     @if ($user->savedCourts->count() > 3)
-                        <button type="button" onclick="showMoreItems('saved-courts', this)" style="margin-top: 14px; padding: 10px 16px; border: 0; border-radius: 8px; background: #17251f; color: #c7f36a; font: inherit; font-weight: 700; cursor: pointer;">See more</button>
+                        <button type="button" class="btn-show-more" onclick="showMoreItems('saved-courts', this)" data-expanded="false">Show more</button>
                     @endif
                 @endif
             </div>
+        </div>
 
-            <div style="margin-top: 24px;">
-                <div style="background: #ffffff; border: 1px solid #d7ddd8; border-radius: 16px; padding: 20px;">
-                <h2 style="margin-top: 0; margin-bottom: 16px;">Your reported Courts</h2>
+        <div class="section-full">
+            <div class="card">
+                <h2>⚑ Your reported courts</h2>
 
                 @if ($user->reportedCourts->isEmpty())
-                    <p style="margin: 0; color: #4a4f4b;">You haven’t reported any courts.</p>
+                    <p class="empty-note">You haven’t reported any courts.</p>
                 @else
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+                    <div class="item-grid">
                         @foreach ($user->reportedCourts as $court)
-                            <div @if ($loop->index >= 3) data-extra-item="reported-courts" style="display: none; border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @else style="border: 1px solid #dde4df; border-radius: 12px; padding: 14px; background: #f8faf8;" @endif>
+                            @php
+                                $resolved = ($court->pivot->is_resolved ?? null) == 1;
+                            @endphp
+
+                            <div class="item" @if ($loop->index >= 3) hidden data-extra-item="reported-courts" @endif>
                                 @if ($court->photo)
-                                    <img src="{{ asset('storage/' . $court->photo) }}" alt="Court photo" style="width: 100%; height: 150px; object-fit: cover; border-radius: 10px; margin-bottom: 10px;">
+                                    <img src="{{ asset('storage/' . $court->photo) }}" alt="Court photo" class="item-photo">
                                 @endif
 
-                                <div style="font-weight: 700; font-size: 1.05rem;">{{ $court->name ?: 'Untitled court' }}</div>
-                                <div style="color: #4a4f4b; margin-top: 4px;">
-                                    {{ $court->city ?: 'Unknown city' }}{{ $court->state ? ', ' . $court->state : '' }}
+                                <span class="badge {{ $resolved ? 'badge-resolved' : 'badge-pending' }}">
+                                    {{ $resolved ? '✔ Handled' : '⌛ Pending' }}
+                                </span>
+
+                                <div class="item-title">{{ $court->name ?: 'Untitled court' }}</div>
+                                <div class="item-sub">{{ $court->city ?: 'Unknown city' }}{{ $court->state ? ', ' . $court->state : '' }}</div>
+
+                                <div style="margin-top: 10px;">
+                                    <span class="rating">⭐ {{ $court->rating ? number_format($court->rating, 1) : 'No rating yet' }}</span>
                                 </div>
-                                <div style="color: #6b736e; font-size: 0.85rem; margin-top: 8px;">
-                                    ⭐ {{ $court->rating ? number_format($court->rating, 1) : 'No rating yet' }}
-                                </div>
-                                <a
-                                    href="{{ route('map') }}?court={{ $court->id }}"
-                                    style="display: inline-block; color: #6b736e; font-size: 0.85rem; margin-top: 4px; cursor: pointer; text-decoration: none;">
-                                    🗺️See on map
-                                </a>
-                                <div style="color: #6b736e; font-size: 0.85rem; margin-top: 4px;">
-                                    Reported {{ $court->pivot?->created_at?->format('M d, Y') ?? 'recently' }}
-                                </div>
+
+                                <a href="{{ route('map') }}?court={{ $court->id }}" class="item-link">🗺️ See on map</a>
+
+                                <div class="item-meta">Reported {{ $court->pivot?->created_at?->format('M d, Y') ?? 'recently' }}</div>
+
+                                @if (! $resolved)
+                                    <form action="{{ route('reports.cancel', ['report' => $court->pivot->id]) }}"
+                                          method="POST" onsubmit="return confirm('Cancel this report?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn-cancel-report">✖ Cancel report</button>
+                                    </form>
+                                @endif
                             </div>
                         @endforeach
                     </div>
                 @endif
             </div>
         </div>
-    </div>
+    </main>
+
     <script>
         function showMoreItems(group, button) {
-            document.querySelectorAll(`[data-extra-item="${group}"]`).forEach(item => {
-                item.style.display = '';
+            const extraItems = document.querySelectorAll(`[data-extra-item="${group}"]`);
+            const expanded = button.dataset.expanded === 'true';
+
+            extraItems.forEach(item => {
+                item.hidden = expanded;
             });
 
-            button.remove();
+            button.dataset.expanded = expanded ? 'false' : 'true';
+            button.textContent = expanded ? 'Show more' : 'Show less';
         }
     </script>
 </x-layout>
