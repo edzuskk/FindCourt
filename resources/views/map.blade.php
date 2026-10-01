@@ -10,53 +10,59 @@
             >
         </div>
 
-        <div class="rating-filter-wrapper">
-            <label for="ratingFilter">Rating</label>
-            <select id="ratingFilter" aria-label="Filter courts by rating">
-                <option value="all">All ratings</option>
-                <option value="5">5 stars</option>
-                <option value="4">4+ stars</option>
-                <option value="3">3+ stars</option>
-                <option value="2">2+ stars</option>
-                <option value="1">1+ stars</option>
-            </select>
-        </div>
+        <button type="button" id="filterToggle" class="filter-toggle-btn" aria-expanded="false" aria-controls="filterPanel" aria-label="Toggle filters">
+            <span aria-hidden="true">⚙</span> Filters
+        </button>
 
-        <div class="rating-filter-wrapper">
-            <label for="cityFilter">City</label>
-            <select id="cityFilter" aria-label="Filter courts by city">
-                <option value="all">All cities</option>
-                @foreach($courts->pluck('city')->filter()->sort()->unique() as $city)
-                    <option value="{{ $city }}">{{ $city }}</option>
-                @endforeach
-            </select>
-        </div>
+        <div id="filterPanel" class="court-filter-panel" hidden>
+            <div class="rating-filter-wrapper">
+                <label for="ratingFilter">Rating</label>
+                <select id="ratingFilter" aria-label="Filter courts by rating">
+                    <option value="all">All ratings</option>
+                    <option value="5">5 stars</option>
+                    <option value="4">4+ stars</option>
+                    <option value="3">3+ stars</option>
+                    <option value="2">2+ stars</option>
+                    <option value="1">1+ stars</option>
+                </select>
+            </div>
 
-        <div class="rating-filter-wrapper">
-            <label for="stateFilter">State</label>
-            <select id="stateFilter" aria-label="Filter courts by state">
-                <option value="all">All states</option>
-                @foreach($courts->pluck('state')->filter()->sort()->unique() as $state)
-                    <option value="{{ $state }}">{{ $state }}</option>
-                @endforeach
-            </select>
-        </div>
+            <div class="rating-filter-wrapper">
+                <label for="cityFilter">City</label>
+                <select id="cityFilter" aria-label="Filter courts by city">
+                    <option value="all">All cities</option>
+                    @foreach($courts->pluck('city')->filter()->sort()->unique() as $city)
+                        <option value="{{ $city }}">{{ $city }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-        @auth
-        <div class="rating-filter-wrapper" style="display: flex; align-items: center; gap: 6px;">
-            <input type="checkbox" id="savedOnlyFilter" aria-label="Only saved courts">
-            <label for="savedOnlyFilter" style="margin: 0;">⭐ Only saved</label>
-        </div>
-        @endauth
+            <div class="rating-filter-wrapper">
+                <label for="stateFilter">State</label>
+                <select id="stateFilter" aria-label="Filter courts by state">
+                    <option value="all">All states</option>
+                    @foreach($courts->pluck('state')->filter()->sort()->unique() as $state)
+                        <option value="{{ $state }}">{{ $state }}</option>
+                    @endforeach
+                </select>
+            </div>
 
-        <div class="rating-filter-wrapper">
-            <label for="sortFilter">Sort</label>
-            <select id="sortFilter" aria-label="Sort courts">
-                <option value="default">Default</option>
-                <option value="rating">Highest rated</option>
-                <option value="likes">Most liked</option>
-                <option value="newest">Newest</option>
-            </select>
+            @auth
+            <div class="rating-filter-wrapper" style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="savedOnlyFilter" aria-label="Only saved courts">
+                <label for="savedOnlyFilter" style="margin: 0;">⭐ Only saved</label>
+            </div>
+            @endauth
+
+            <div class="rating-filter-wrapper">
+                <label for="sortFilter">Sort</label>
+                <select id="sortFilter" aria-label="Sort courts">
+                    <option value="default">Default</option>
+                    <option value="rating">Highest rated</option>
+                    <option value="likes">Most liked</option>
+                    <option value="newest">Newest</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -184,6 +190,26 @@
             currentSearchTerm = this.value;
             applyCourtFilters();
         });
+
+        const filterToggle = document.getElementById('filterToggle');
+        const filterPanel = document.getElementById('filterPanel');
+
+        if (filterToggle && filterPanel) {
+            filterToggle.addEventListener('click', function () {
+                const isOpen = !filterPanel.hidden;
+                filterPanel.hidden = isOpen;
+                this.setAttribute('aria-expanded', String(!isOpen));
+                this.classList.toggle('active', !isOpen);
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!filterPanel.hidden && !filterPanel.contains(event.target) && event.target !== filterToggle && !filterToggle.contains(event.target)) {
+                    filterPanel.hidden = true;
+                    filterToggle.setAttribute('aria-expanded', 'false');
+                    filterToggle.classList.remove('active');
+                }
+            });
+        }
 
         const sidebar = document.getElementById('sidebar');
         const sidebarTitle = document.getElementById('sidebarTitle');

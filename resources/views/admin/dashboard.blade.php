@@ -226,6 +226,11 @@
                                             <button type="button" class="resolve-report-btn" data-report-id="{{ $report->id }}">Mark handled</button>
                                             <button type="button" class="delete-court-btn" data-court-id="{{ $report->court->id }}">Delete court</button>
                                         @endif
+                                        <a
+                                            href="{{ route('map') }}?court={{ $court->id }}"
+                                            style="display: inline-block; color: #6b736e; font-size: 0.85rem; margin-top: 4px; cursor: pointer; text-decoration: none;">
+                                            🗺️See on map
+                                        </a>
                                     </td>
                                 </tr>
                             @empty
