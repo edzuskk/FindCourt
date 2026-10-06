@@ -7,7 +7,7 @@ use App\Models\CourtReport;
 use App\Models\CourtReview;
 use App\Models\ReviewReport;
 use App\Models\User;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -52,6 +52,20 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => 'You cannot delete your own account.',
             ], 422);
+        }
+
+        $ownedCourts = $user->courts()->with('reviews:id,court_id,photo')->get(['id', 'photo']);
+
+        foreach ($ownedCourts as $court) {
+            if ($court->photo) {
+                Storage::disk('public')->delete($court->photo);
+            }
+
+            foreach ($court->reviews as $review) {
+                if ($review->photo) {
+                    Storage::disk('public')->delete($review->photo);
+                }
+            }
         }
 
         $user->delete();

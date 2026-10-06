@@ -1,53 +1,62 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CourtReportController;
+use App\Http\Controllers\CourtReviewController;
+use App\Http\Controllers\CourtViewController;
+use App\Http\Controllers\MarkerController;
+use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\SavedCourtController;
+use App\Http\Controllers\SessionController;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
-Route::get('/', [App\Http\Controllers\MarkerController::class, 'index'])->name('map');
+Route::get('/', [MarkerController::class, 'index'])->name('map');
 
 Route::middleware('guest')->group(function () {
-    Route::get('/register', [App\Http\Controllers\RegisterController::class, 'create'])->name('register');
-    Route::post('/register', [App\Http\Controllers\RegisterController::class, 'store'])->middleware('throttle:10,1')->name('register.store');
-    Route::get('/login', [App\Http\Controllers\SessionController::class, 'create'])->name('login');
-    Route::post('/login', [App\Http\Controllers\SessionController::class, 'store'])->middleware('throttle:10,1')->name('login');
+    Route::get('/register', [RegisterController::class, 'create'])->name('register');
+    Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:10,1')->name('register.store');
+    Route::get('/login', [SessionController::class, 'create'])->name('login');
+    Route::post('/login', [SessionController::class, 'store'])->middleware('throttle:10,1')->name('login');
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [App\Http\Controllers\SessionController::class, 'show'])->name('profile.view');
-    Route::post('/logout', [App\Http\Controllers\SessionController::class, 'destroy'])->name('logout');
-    Route::post('/courts', [App\Http\Controllers\MarkerController::class, 'store'])->name('courts.store');
-    Route::post('/courts/{court}/reviews', [App\Http\Controllers\CourtReviewController::class, 'store'])->middleware('throttle:20,1')->name('courts.reviews.store');
-    Route::put('/courts/{court}/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'update'])->name('courts.reviews.update');
-    Route::delete('/courts/{court}/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'destroy'])->name('courts.reviews.destroy');
-    Route::post('/courts/{court}/react', [App\Http\Controllers\CourtReviewController::class, 'react'])->middleware('throttle:60,1')->name('courts.react');
-    Route::post('/courts/{court}/save', [App\Http\Controllers\SavedCourtController::class, 'toggle'])->name('courts.save');
-    Route::post('/courts/{court}/report', [App\Http\Controllers\CourtReportController::class, 'store'])->middleware('throttle:10,1')->name('courts.report');
-    Route::delete('/my-reports/{report}', [App\Http\Controllers\CourtReportController::class, 'cancel'])->middleware('throttle:10,1')->name('reports.cancel');
-    Route::post('/reviews/{review}/report', [App\Http\Controllers\CourtReportController::class, 'storeReviewReport'])->middleware('throttle:10,1')->name('reviews.report');
-    Route::get('/profile/edit', [App\Http\Controllers\SessionController::class, 'edit'])->name('profile.edit');
-    Route::put('/profile', [App\Http\Controllers\SessionController::class, 'update'])->name('profile.update');
+    Route::get('/profile', [SessionController::class, 'show'])->name('profile.view');
+    Route::post('/logout', [SessionController::class, 'destroy'])->name('logout');
+    Route::post('/courts', [MarkerController::class, 'store'])->name('courts.store');
+    Route::post('/courts/{court}/reviews', [CourtReviewController::class, 'store'])->middleware('throttle:20,1')->name('courts.reviews.store');
+    Route::put('/courts/{court}/reviews/{review}', [CourtReviewController::class, 'update'])->name('courts.reviews.update');
+    Route::delete('/courts/{court}/reviews/{review}', [CourtReviewController::class, 'destroy'])->name('courts.reviews.destroy');
+    Route::post('/courts/{court}/react', [CourtReviewController::class, 'react'])->middleware('throttle:60,1')->name('courts.react');
+    Route::post('/courts/{court}/save', [SavedCourtController::class, 'toggle'])->name('courts.save');
+    Route::post('/courts/{court}/report', [CourtReportController::class, 'store'])->middleware('throttle:10,1')->name('courts.report');
+    Route::delete('/my-reports/{report}', [CourtReportController::class, 'cancel'])->middleware('throttle:10,1')->name('reports.cancel');
+    Route::post('/reviews/{review}/report', [CourtReportController::class, 'storeReviewReport'])->middleware('throttle:10,1')->name('reviews.report');
+    Route::get('/profile/edit', [SessionController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [SessionController::class, 'update'])->name('profile.update');
 });
 
-Route::get('/map', [App\Http\Controllers\MarkerController::class, 'index'])->name('map.page');
-Route::get('/courts', [App\Http\Controllers\MarkerController::class, 'index'])->name('courts.index');
-Route::get('/courts/{court}/reviews', [App\Http\Controllers\CourtReviewController::class, 'index'])->name('courts.reviews.index');
-Route::get('/courts/view/{court}', [App\Http\Controllers\CourtViewController::class, 'show'])->name('courts.show');
+Route::get('/map', [MarkerController::class, 'index'])->name('map.page');
+Route::get('/courts', [MarkerController::class, 'index'])->name('courts.index');
+Route::get('/courts/{court}/reviews', [CourtReviewController::class, 'index'])->name('courts.reviews.index');
+Route::get('/courts/view/{court}', [CourtViewController::class, 'show'])->name('courts.show');
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
 
-    Route::get('/', [App\Http\Controllers\AdminController::class, 'index'])
+    Route::get('/', [AdminController::class, 'index'])
         ->name('admin.dashboard');
-    Route::delete('/users/{user}', [App\Http\Controllers\AdminController::class, 'destroy'])->name('users.destroy');
-    Route::delete('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'destroy'])->name('courts.destroy');
-    Route::put('/courts/{court}', [App\Http\Controllers\MarkerController::class, 'update'])->name('courts.update');
-    Route::patch('/reports/{report}', [App\Http\Controllers\CourtReportController::class, 'resolve'])->name('reports.resolve');
-    Route::delete('/reports/{report}', [App\Http\Controllers\CourtReportController::class, 'destroy'])->name('reports.destroy');
-    Route::patch('/review-reports/{report}', [App\Http\Controllers\CourtReportController::class, 'resolveReviewReport'])->name('review-reports.resolve');
-    Route::delete('/review-reports/{report}', [App\Http\Controllers\CourtReportController::class, 'destroyReviewReport'])->name('review-reports.destroy');
-    Route::put('/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'update'])->name('admin.reviews.update');
-    Route::delete('/reviews/{review}', [App\Http\Controllers\CourtReviewController::class, 'destroy'])->name('admin.reviews.destroy');
+    Route::delete('/users/{user}', [AdminController::class, 'destroy'])->name('users.destroy');
+    Route::delete('/courts/{court}', [MarkerController::class, 'destroy'])->name('courts.destroy');
+    Route::put('/courts/{court}', [MarkerController::class, 'update'])->name('courts.update');
+    Route::patch('/reports/{report}', [CourtReportController::class, 'resolve'])->name('reports.resolve');
+    Route::delete('/reports/{report}', [CourtReportController::class, 'destroy'])->name('reports.destroy');
+    Route::patch('/review-reports/{report}', [CourtReportController::class, 'resolveReviewReport'])->name('review-reports.resolve');
+    Route::delete('/review-reports/{report}', [CourtReportController::class, 'destroyReviewReport'])->name('review-reports.destroy');
+    Route::put('/courts/{court}/reviews/{review}', [CourtReviewController::class, 'update'])->name('admin.reviews.update');
+    Route::delete('/courts/{court}/reviews/{review}', [CourtReviewController::class, 'destroy'])->name('admin.reviews.destroy');
 });
 
 Route::get('/forgot-password', function () {
@@ -87,7 +96,7 @@ Route::post('/reset-password', function (Request $request) {
     $request->validate([
         'token' => ['required'],
         'email' => ['required', 'email'],
-        'password' => ['required', 'confirmed', 'min:8'],
+        'password' => ['required', 'confirmed', PasswordRule::min(12)->letters()->numbers()->symbols()],
     ]);
 
     $status = Password::reset(

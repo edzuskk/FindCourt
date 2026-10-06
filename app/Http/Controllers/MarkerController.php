@@ -11,18 +11,19 @@ class MarkerController extends Controller
 {
     public function index(Request $request)
     {
-        $courts = Court::with('reviews.user')->get();
+        $courts = Court::with(['reviews.user:id,username'])->get();
         $savedCourtIds = Auth::check()
-            ? Auth::user()->savedCourts()->pluck('courts.id')->all()
+            ? array_fill_keys(Auth::user()->savedCourts()->pluck('courts.id')->all(), true)
             : [];
 
         $courts->transform(function ($court) {
             $court->avg_rating = $court->rating ?? ($court->reviews->avg('rating') ?: 0);
+
             return $court;
         });
 
         $courts->each(function ($court) use ($savedCourtIds) {
-            $court->is_saved = in_array($court->id, $savedCourtIds, true);
+            $court->is_saved = isset($savedCourtIds[$court->id]);
         });
 
         if ($request->expectsJson() || $request->is('courts')) {
@@ -60,6 +61,7 @@ class MarkerController extends Controller
             'court' => $court,
         ]);
     }
+
     public function update(Request $request, Court $court)
     {
         $validated = $request->validate([
@@ -89,6 +91,7 @@ class MarkerController extends Controller
             'court' => $court,
         ]);
     }
+
     public function destroy(Court $court)
     {
         if ($court->photo) {
