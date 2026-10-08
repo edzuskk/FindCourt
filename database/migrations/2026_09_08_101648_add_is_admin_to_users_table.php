@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,11 +9,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasColumn('users', 'is_admin')) {
-            Schema::table('users', function (Blueprint $table) {
-                $table->boolean('is_admin')->default(false);
-            });
-        }
+        // The users table migration already creates this column.
     }
 
     /**
@@ -23,10 +17,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        if (Schema::hasColumn('users', 'is_admin')) {
-            Schema::table('users', function (Blueprint $table) {
-                $table->dropColumn('is_admin');
-            });
-        }
+        // The column belongs to the users table migration and must remain on rollback.
     }
 };

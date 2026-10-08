@@ -137,6 +137,7 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarTitle = document.getElementById('sidebarTitle');
         const sidebarContent = document.getElementById('sidebarContent');
+        let courtDetailsRequest = 0;
 
         function showSidebar(title, html) {
             sidebarTitle.textContent = title;
@@ -150,8 +151,44 @@
         }
 
         function closeSidebar() {
+            courtDetailsRequest++;
             sidebar.classList.remove('open');
             sidebarContent.innerHTML = '';
+        }
+
+        function showCourtDetails(court) {
+            const requestId = ++courtDetailsRequest;
+            showSidebar('Loading court details', '<p>Loading court details...</p>');
+
+            fetch(`/courts/${court.id}/reviews`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Server error: ' + response.status);
+                    }
+
+                    return response.json();
+                })
+                .then(reviewData => {
+                    if (requestId !== courtDetailsRequest || sidebarTitle.textContent !== 'Loading court details') {
+                        return;
+                    }
+
+                    showSidebar('Court details', buildCourtCard({
+                        ...court,
+                        ...reviewData.court,
+                        is_saved: court.is_saved,
+                        reviews: reviewData.reviews || [],
+                        reviews_count: reviewData.court?.reviews_count ?? reviewData.reviews?.length ?? 0,
+                        avg_rating: reviewData.court?.avg_rating ?? reviewData.court?.rating ?? court.avg_rating ?? 0
+                    }));
+                })
+                .catch(error => {
+                    if (requestId === courtDetailsRequest && sidebarTitle.textContent === 'Loading court details') {
+                        showSidebar('Court details', '<p>Could not load court details.</p>');
+                    }
+
+                    console.error('Error loading court details:', error);
+                });
         }
 
         function resolvePhotoUrl(photo) {
@@ -344,7 +381,6 @@
         function editCourt(court){
             const form = document.createElement('form');
             form.innerHTML = `
-                @method('PUT')
                 <div class="form-group">
                     <label for="editCourtName">Court name</label>
                     <input type="text" id="editCourtName" name="name" required>
@@ -397,6 +433,7 @@
 
 
                 const formData = new FormData();
+                formData.append('_method', 'PUT');
                 formData.append('name', name || '');
                 formData.append('address', address || '');
                 formData.append('city', city || '');
@@ -436,7 +473,7 @@
             return form;
         }
 
-        function buildReviewForm(courtId, existingReview = null) {
+        function buildReviewForm(courtId, existingReview = null, isAdminAction = false) {
             const form = document.createElement('form');
             const isEditing = Boolean(existingReview);
             form.innerHTML = `
@@ -512,6 +549,9 @@
 
                 const formData = new FormData();
 
+                if (isEditing) {
+                    formData.append('_method', 'PUT');
+                }
                 formData.append('rating', rating || '');
                 formData.append('comment', comment || '');
 
@@ -519,8 +559,12 @@
                     formData.append('photo', photoInput.files[0]);
                 }
 
-                fetch(isEditing ? `/courts/${courtId}/reviews/${existingReview.id}` : `/courts/${courtId}/reviews`, {
-                    method: isEditing ? 'PUT' : 'POST',
+                const reviewUrl = isEditing
+                    ? `${isAdminAction ? '/admin' : ''}/courts/${courtId}/reviews/${existingReview.id}`
+                    : `/courts/${courtId}/reviews`;
+
+                fetch(reviewUrl, {
+                    method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'
@@ -726,7 +770,7 @@
             const ownReview = reviews.find(review =>
                 review.is_owner || (currentUserId && Number(review.user_id) === Number(currentUserId))
             );
-            const totalReviews = reviews.length;
+            const totalReviews = Number(court.reviews_count ?? reviews.length);
             const canReport = canAddCourt && !isAdmin;
             const calculatedAverage = reviews.length ? (reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length) : 0;
             const averageRating = Number(court.avg_rating ?? calculatedAverage ?? 0);
@@ -740,7 +784,7 @@
                         <strong>${escapeHtml(review.username)}</strong>
                         <div>⭐ ${escapeHtml(review.rating || 'No rating')}</div>
                         ${review.photo ? `<img src="${escapeHtml(resolvePhotoUrl(review.photo))}" alt="Court review photo" style="max-width:100%; margin-top:8px; border-radius:8px;">` : ''}
-                        <p>${escapeHtml(review.comment || 'No comment provided.')} </p>
+                        ${review.comment ? `<p>${escapeHtml(review.comment)}</p>` : ''}
                         ${(review.is_owner || (currentUserId && Number(review.user_id) === Number(currentUserId))) ? `<button type="button" class="edit-review-btn" data-review-id="${review.id}">Edit review</button><button type="button" class="delete-review-btn" data-review-id="${review.id}">Delete review</button>` : ''}
                         ${canReport ? `<button type="button" class="report-review-btn" data-review-id="${review.id}">🚩Report review</button>` : ''}
                         ${isAdmin ? `<button type="button" class="admin-edit-review-btn" data-review-id="${review.id}">✏️Edit</button><button type="button" class="admin-delete-review-btn" data-review-id="${review.id}">🗑️Delete</button>` : ''}
@@ -819,7 +863,7 @@
                     const review = reviews.find(item => String(item.id) === button.dataset.reviewId);
 
                     if (review) {
-                        showSidebar('Edit review (admin)', buildReviewForm(court.id, review));
+                        showSidebar('Edit review (admin)', buildReviewForm(court.id, review, true));
                     }
                 });
             });
@@ -833,7 +877,11 @@
                         return;
                     }
 
-                    fetch(`/courts/${court.id}/reviews/${review.id}`, {
+                    const reviewUrl = isAdminAction
+                        ? `/admin/courts/${court.id}/reviews/${review.id}`
+                        : `/courts/${court.id}/reviews/${review.id}`;
+
+                    fetch(reviewUrl, {
                         method: 'DELETE',
                         headers: {
                             'X-CSRF-TOKEN': csrfToken,
@@ -895,7 +943,7 @@
                     })
                     .then(() => {
                         loadCourts();
-                        showSidebar('Court details', buildCourtCard(court));
+                        showCourtDetails(court);
                     })
                     .catch(error => {
                         console.error('Error reacting:', error);
@@ -1015,12 +1063,12 @@
 
                 marker.on('click', (event) => {
                     L.DomEvent.stopPropagation(event);
-                    showSidebar('Court details', buildCourtCard(court));
+                    showCourtDetails(court);
                 });
 
                 if (requestedCourtId && String(court.id) === requestedCourtId) {
                     map.setView([court.latitude, court.longitude], Math.max(map.getZoom(), 15));
-                    showSidebar('Court details', buildCourtCard(court));
+                    showCourtDetails(court);
                 }
             });
         }

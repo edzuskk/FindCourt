@@ -17,7 +17,17 @@ class ReviewReport extends Model
         'reportReason',
         'reportComment',
         'is_resolved',
+        'resolved_by',
+        'resolved_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_resolved' => 'boolean',
+            'resolved_at' => 'datetime',
+        ];
+    }
 
     public function review(): BelongsTo
     {
@@ -27,5 +37,10 @@ class ReviewReport extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function resolvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
     }
 }

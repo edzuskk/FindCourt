@@ -50,6 +50,13 @@
                                 </div>
 
                                 <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <label for="current_password" style="font-weight: 600; color: #233026;">Current password</label>
+                                    <input type="password" id="current_password" name="current_password" autocomplete="current-password"
+                                        style="width: 100%; padding: 14px 16px; border: 1px solid #cdd7d0; border-radius: 12px; background: #f8faf8; font-size: 1rem; color: #233026; box-sizing: border-box;">
+                                    <small style="color: #6b736e;">Required only when changing your email address.</small>
+                                </div>
+
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
                                     <label for="profile_picture" style="font-weight: 600; color: #233026;">Profile picture</label>
                                     <input type="file" id="profile_picture" name="profile_picture" accept="image/*"
                                         style="width: 100%; padding: 12px 14px; border: 1px dashed #b7c6bd; border-radius: 12px; background: #f8faf8; color: #4a4f4b; box-sizing: border-box;">

@@ -30,6 +30,23 @@ class Court extends Model
         return $this->hasMany(CourtReview::class);
     }
 
+    public function recalculateRating(): void
+    {
+        $average = $this->reviews()->whereNotNull('rating')->avg('rating');
+
+        $this->forceFill([
+            'rating' => round((float) ($average ?? 0), 2),
+        ])->save();
+    }
+
+    public function lockForAggregateUpdate(): self
+    {
+        return static::query()
+            ->whereKey($this->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

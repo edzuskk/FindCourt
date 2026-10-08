@@ -6,36 +6,44 @@ use App\Models\Court;
 use App\Models\CourtReport;
 use App\Models\CourtReview;
 use App\Models\ReviewReport;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CourtReportController extends Controller
 {
     public function store(Request $request, Court $court): JsonResponse
     {
         $validated = $request->validate([
-            'reportReason'  => ['required', 'in:' . implode(',', CourtReport::REASONS)],
+            'reportReason' => ['required', 'in:'.implode(',', CourtReport::REASONS)],
             'reportComment' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $alreadyReported = CourtReport::where('court_id', $court->id)
-            ->where('user_id', Auth::id())
-            ->exists();
+        $created = DB::transaction(function () use ($court, $validated): bool {
+            User::query()->whereKey(Auth::id())->lockForUpdate()->firstOrFail();
 
-        if ($alreadyReported) {
+            if (CourtReport::where('court_id', $court->id)->where('user_id', Auth::id())->exists()) {
+                return false;
+            }
+
+            CourtReport::create([
+                'court_id' => $court->id,
+                'user_id' => Auth::id(),
+                'reportReason' => $validated['reportReason'],
+                'reportComment' => $validated['reportComment'] ?? null,
+            ]);
+
+            return true;
+        });
+
+        if (! $created) {
             return response()->json([
                 'success' => false,
                 'message' => 'You already reported this court.',
             ], 422);
         }
-
-        CourtReport::create([
-            'court_id' => $court->id,
-            'user_id'  => Auth::id(),
-            'reportReason'   => $validated['reportReason'],
-            'reportComment'  => $validated['reportComment'] ?? null,
-        ]);
 
         return response()->json([
             'success' => true,
@@ -46,27 +54,33 @@ class CourtReportController extends Controller
     public function storeReviewReport(Request $request, CourtReview $review): JsonResponse
     {
         $validated = $request->validate([
-            'reportReason'  => ['required', 'in:' . implode(',', ReviewReport::REASONS)],
+            'reportReason' => ['required', 'in:'.implode(',', ReviewReport::REASONS)],
             'reportComment' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $alreadyReported = ReviewReport::where('review_id', $review->id)
-            ->where('user_id', Auth::id())
-            ->exists();
+        $created = DB::transaction(function () use ($review, $validated): bool {
+            User::query()->whereKey(Auth::id())->lockForUpdate()->firstOrFail();
 
-        if ($alreadyReported) {
+            if (ReviewReport::where('review_id', $review->id)->where('user_id', Auth::id())->exists()) {
+                return false;
+            }
+
+            ReviewReport::create([
+                'review_id' => $review->id,
+                'user_id' => Auth::id(),
+                'reportReason' => $validated['reportReason'],
+                'reportComment' => $validated['reportComment'] ?? null,
+            ]);
+
+            return true;
+        });
+
+        if (! $created) {
             return response()->json([
                 'success' => false,
                 'message' => 'You already reported this review.',
             ], 422);
         }
-
-        ReviewReport::create([
-            'review_id'     => $review->id,
-            'user_id'       => Auth::id(),
-            'reportReason'  => $validated['reportReason'],
-            'reportComment' => $validated['reportComment'] ?? null,
-        ]);
 
         return response()->json([
             'success' => true,
@@ -76,7 +90,11 @@ class CourtReportController extends Controller
 
     public function resolveReviewReport(ReviewReport $report): JsonResponse
     {
-        $report->update(['is_resolved' => true]);
+        $report->update([
+            'is_resolved' => true,
+            'resolved_by' => Auth::id(),
+            'resolved_at' => now(),
+        ]);
 
         return response()->json(['success' => true]);
     }
@@ -90,7 +108,11 @@ class CourtReportController extends Controller
 
     public function resolve(CourtReport $report): JsonResponse
     {
-        $report->update(['is_resolved' => true]);
+        $report->update([
+            'is_resolved' => true,
+            'resolved_by' => Auth::id(),
+            'resolved_at' => now(),
+        ]);
 
         return response()->json(['success' => true]);
     }

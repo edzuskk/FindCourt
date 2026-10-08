@@ -1908,6 +1908,31 @@ nav {
     overflow-x: auto;
 }
 
+.admin-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-top: 1px solid #edf1ee;
+    color: #4a4f4b;
+    font-size: 0.9rem;
+}
+
+.admin-pagination a {
+    color: #1f3a2d;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.admin-pagination a:hover {
+    text-decoration: underline;
+}
+
+.admin-pagination [aria-disabled="true"] {
+    color: #8c9690;
+}
+
 .admin-table {
     width: 100%;
     border-collapse: collapse;

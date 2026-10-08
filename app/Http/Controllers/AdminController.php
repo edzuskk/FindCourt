@@ -7,42 +7,58 @@ use App\Models\CourtReport;
 use App\Models\CourtReview;
 use App\Models\ReviewReport;
 use App\Models\User;
-use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
     public function index()
     {
+        $userCount = User::count();
+        $courtCount = Court::count();
+        $courtReviewCount = CourtReview::count();
+        $openCourtReportCount = CourtReport::where('is_resolved', false)->count();
+        $openReviewReportCount = ReviewReport::where('is_resolved', false)->count();
+
         $users = User::query()
             ->select(['id', 'username', 'email', 'is_admin', 'created_at'])
             ->withCount(['courts', 'reviews'])
             ->latest()
-            ->get();
+            ->simplePaginate(25, ['*'], 'usersPage');
 
         $courts = Court::query()
             ->select(['id', 'name', 'address', 'city', 'state', 'description', 'rating', 'created_at', 'user_id'])
             ->with(['user:id,username'])
             ->withCount('reviews')
             ->latest()
-            ->get();
+            ->simplePaginate(25, ['*'], 'courtsPage');
 
         $courtReviews = CourtReview::query()
             ->select(['id', 'court_id', 'user_id', 'username', 'rating', 'comment', 'created_at'])
             ->with(['court:id,name', 'user:id,username'])
             ->latest()
-            ->get();
+            ->simplePaginate(25, ['*'], 'reviewsPage');
 
         $reports = CourtReport::query()
-            ->with(['court:id,name', 'user:id,username'])
+            ->with(['court:id,name', 'user:id,username', 'resolvedBy:id,username'])
             ->latest()
-            ->get();
+            ->simplePaginate(25, ['*'], 'courtReportsPage');
 
         $reviewReports = ReviewReport::query()
-            ->with(['review:id,username,comment,court_id', 'review.court:id,name', 'user:id,username'])
+            ->with(['review:id,username,comment,court_id', 'review.court:id,name', 'user:id,username', 'resolvedBy:id,username'])
             ->latest()
-            ->get();
+            ->simplePaginate(25, ['*'], 'reviewReportsPage');
 
-        return view('admin.dashboard', compact('users', 'courts', 'courtReviews', 'reports', 'reviewReports'));
+        return view('admin.dashboard', compact(
+            'users',
+            'courts',
+            'courtReviews',
+            'reports',
+            'reviewReports',
+            'userCount',
+            'courtCount',
+            'courtReviewCount',
+            'openCourtReportCount',
+            'openReviewReportCount'
+        ));
     }
 
     public function destroy(User $user)
@@ -52,20 +68,6 @@ class AdminController extends Controller
                 'success' => false,
                 'message' => 'You cannot delete your own account.',
             ], 422);
-        }
-
-        $ownedCourts = $user->courts()->with('reviews:id,court_id,photo')->get(['id', 'photo']);
-
-        foreach ($ownedCourts as $court) {
-            if ($court->photo) {
-                Storage::disk('public')->delete($court->photo);
-            }
-
-            foreach ($court->reviews as $review) {
-                if ($review->photo) {
-                    Storage::disk('public')->delete($review->photo);
-                }
-            }
         }
 
         $user->delete();

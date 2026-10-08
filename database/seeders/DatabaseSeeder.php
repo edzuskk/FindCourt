@@ -15,19 +15,29 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $email = config('services.findcourt_admin.email');
+        $password = config('services.findcourt_admin.password');
 
-        User::factory()->create([
-            'username' => 'Admin',
-            'email' => 'eddzusss@gmail.com',
-            'password' => 'Admin123$',
+        if (! filled($email) || ! filled($password)) {
+            $this->command?->warn('Admin seeding skipped: configure FINDCOURT_ADMIN_EMAIL and FINDCOURT_ADMIN_PASSWORD.');
+
+            return;
+        }
+
+        $admin = User::query()->firstOrNew(['email' => $email]);
+
+        if ($admin->exists) {
+            if (! $admin->is_admin) {
+                throw new \RuntimeException('FINDCOURT_ADMIN_EMAIL belongs to a non-admin account.');
+            }
+
+            return;
+        }
+
+        $admin->forceFill([
+            'username' => config('services.findcourt_admin.username'),
+            'password' => $password,
             'is_admin' => true,
-        ]);
-        User::factory()->create([
-            'username' => 'User',
-            'email' => 'user@user.com',
-            'password' => 'User123$',
-            'is_admin' => false,
-        ]);
+        ])->save();
     }
 }

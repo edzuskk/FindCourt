@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Court;
 use App\Models\CourtReaction;
 use App\Models\CourtReview;
+use App\Services\ImageUploadTransaction;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class CourtReviewController extends Controller
 {
+    public function __construct(private ImageUploadTransaction $imageUploads) {}
+
     public function index(Court $court)
     {
         $reviews = $court->reviews()->with('user')->latest()->get()->map(function ($review) {
@@ -41,6 +45,7 @@ class CourtReviewController extends Controller
                 'dislikes' => $court->dislikes,
                 'rating' => $court->rating,
                 'avg_rating' => $court->rating,
+                'reviews_count' => $reviews->count(),
             ],
             'reviews' => $reviews,
         ]);
@@ -49,33 +54,39 @@ class CourtReviewController extends Controller
     public function store(Request $request, Court $court)
     {
         $validated = $request->validate([
-            'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:2000'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
         $user = Auth::user();
 
-        if ($court->reviews()->where('user_id', $user->id)->exists()) {
-            return response()->json(['message' => 'You already reviewed this court.'], 422);
-        }
+        $review = $this->imageUploads->persist(
+            $request->file('photo'),
+            'reviews',
+            function (?string $photoPath) use ($court, $user, $validated): CourtReview {
+                $lockedCourt = $court->lockForAggregateUpdate();
 
-        if ($request->hasFile('photo')) {
-            $validated['photo'] = $request->file('photo')->store('reviews', 'public');
-        }
+                if ($lockedCourt->reviews()->where('user_id', $user->id)->exists()) {
+                    throw new HttpResponseException(
+                        response()->json(['message' => 'You already reviewed this court.'], 422)
+                    );
+                }
 
-        $review = CourtReview::create([
-            'court_id' => $court->id,
-            'user_id' => $user->id,
-            'username' => $user->username,
-            'rating' => $validated['rating'] ?? null,
-            'comment' => $validated['comment'] ?? null,
-            'photo' => $validated['photo'] ?? null,
-        ]);
+                $review = CourtReview::create([
+                    'court_id' => $lockedCourt->id,
+                    'user_id' => $user->id,
+                    'username' => $user->username,
+                    'rating' => $validated['rating'] ?? null,
+                    'comment' => $validated['comment'] ?? null,
+                    'photo' => $photoPath,
+                ]);
 
-        $ratedReviews = $court->reviews()->whereNotNull('rating');
-        $court->rating = $ratedReviews->count() > 0 ? round($ratedReviews->avg('rating'), 2) : 0;
-        $court->save();
+                $lockedCourt->recalculateRating();
+
+                return $review;
+            }
+        );
 
         return response()->json([
             'success' => true,
@@ -96,27 +107,33 @@ class CourtReviewController extends Controller
         abort_unless($review->user_id === Auth::id() || $isAdmin, 403);
 
         $validated = $request->validate([
-            'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:2000'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
         ]);
 
-        if ($request->hasFile('photo')) {
-            $oldPhoto = $review->photo;
-            $validated['photo'] = $request->file('photo')->store('reviews', 'public');
-        } else {
-            $oldPhoto = null;
-        }
+        $review = $this->imageUploads->persist(
+            $request->file('photo'),
+            'reviews',
+            function (?string $photoPath) use ($review, $court, $validated): CourtReview {
+                $lockedCourt = $court->lockForAggregateUpdate();
+                $lockedReview = CourtReview::query()
+                    ->whereKey($review->getKey())
+                    ->where('court_id', $lockedCourt->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-        $review->update($validated);
+                if ($photoPath !== null) {
+                    $validated['photo'] = $photoPath;
+                }
 
-        if ($oldPhoto) {
-            Storage::disk('public')->delete($oldPhoto);
-        }
+                $lockedReview->update($validated);
+                $lockedCourt->recalculateRating();
 
-        $ratedReviews = $court->reviews()->whereNotNull('rating');
-        $court->rating = $ratedReviews->count() > 0 ? round($ratedReviews->avg('rating'), 2) : 0;
-        $court->save();
+                return $lockedReview;
+            },
+            $review->photo
+        );
 
         return response()->json([
             'success' => true,
@@ -135,22 +152,24 @@ class CourtReviewController extends Controller
         abort_unless($review->court_id === $court->id, 404);
         abort_unless($review->user_id === Auth::id() || Auth::user()->is_admin == 1, 403);
 
-        if ($review->photo) {
-            Storage::disk('public')->delete($review->photo);
-        }
+        $this->imageUploads->deleteAfter(function () use ($court, $review): void {
+            $lockedCourt = $court->lockForAggregateUpdate();
+            $lockedReview = CourtReview::query()
+                ->whereKey($review->getKey())
+                ->where('court_id', $lockedCourt->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $review->delete();
-
-        $ratedReviews = $court->reviews()->whereNotNull('rating');
-        $court->rating = $ratedReviews->count() > 0 ? round($ratedReviews->avg('rating'), 2) : 0;
-        $court->save();
+            $lockedReview->delete();
+            $lockedCourt->recalculateRating();
+        }, [$review->photo]);
 
         return response()->json(['success' => true]);
     }
 
     public function react(Request $request, Court $court)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return response()->json(['message' => 'You must be logged in to react.'], 401);
         }
 
@@ -160,19 +179,31 @@ class CourtReviewController extends Controller
 
         $reaction = $validated['reaction'];
 
-        CourtReaction::updateOrCreate(
-            ['court_id' => $court->id, 'user_id' => Auth::id()],
-            ['reaction' => $reaction]
-        );
+        $counts = DB::transaction(function () use ($court, $reaction): array {
+            $lockedCourt = $court->lockForAggregateUpdate();
 
-        $court->likes = CourtReaction::where('court_id', $court->id)->where('reaction', 'like')->count();
-        $court->dislikes = CourtReaction::where('court_id', $court->id)->where('reaction', 'dislike')->count();
-        $court->save();
+            CourtReaction::updateOrCreate(
+                ['court_id' => $lockedCourt->id, 'user_id' => Auth::id()],
+                ['reaction' => $reaction]
+            );
+
+            $lockedCourt->likes = CourtReaction::where('court_id', $lockedCourt->id)
+                ->where('reaction', 'like')
+                ->count();
+            $lockedCourt->dislikes = CourtReaction::where('court_id', $lockedCourt->id)
+                ->where('reaction', 'dislike')
+                ->count();
+            $lockedCourt->save();
+
+            return [
+                'likes' => $lockedCourt->likes,
+                'dislikes' => $lockedCourt->dislikes,
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'likes' => $court->likes,
-            'dislikes' => $court->dislikes,
+            ...$counts,
             'reaction' => $reaction,
         ]);
     }

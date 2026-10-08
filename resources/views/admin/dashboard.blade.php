@@ -13,17 +13,17 @@
         <div class="admin-stats-grid">
             <div class="admin-stat-card">
                 <div class="admin-stat-label">Users</div>
-                <div class="admin-stat-value">{{ $users->count() }}</div>
+                <div class="admin-stat-value">{{ $userCount }}</div>
             </div>
 
             <div class="admin-stat-card">
                 <div class="admin-stat-label">Courts</div>
-                <div class="admin-stat-value">{{ $courts->count() }}</div>
+                <div class="admin-stat-value">{{ $courtCount }}</div>
             </div>
 
             <div class="admin-stat-card">
                 <div class="admin-stat-label">Court Reviews</div>
-                <div class="admin-stat-value">{{ $courtReviews->count() }}</div>
+                <div class="admin-stat-value">{{ $courtReviewCount }}</div>
             </div>
         </div>
 
@@ -82,6 +82,7 @@
                         </tbody>
                     </table>
                 </div>
+                <x-admin-pagination :paginator="$users" />
             </section>
 
             <section class="admin-panel">
@@ -149,6 +150,7 @@
                         </tbody>
                     </table>
                 </div>
+                <x-admin-pagination :paginator="$courts" />
             </section>
 
             <section class="admin-panel">
@@ -193,10 +195,11 @@
                         </tbody>
                     </table>
                 </div>
+                <x-admin-pagination :paginator="$courtReviews" />
             </section>
 
             <section class="admin-panel">
-                <div class="admin-panel-header">Court Reports ({{ $reports->where('is_resolved', false)->count() }} open)</div>
+                <div class="admin-panel-header">Court Reports ({{ $openCourtReportCount }} open)</div>
                 <div class="admin-table-wrap">
                     <table class="admin-table admin-table-reports">
                         <thead>
@@ -207,6 +210,8 @@
                                 <th>Details</th>
                                 <th>Reported by</th>
                                 <th>Status</th>
+                                <th>Resolved by</th>
+                                <th>Resolved at</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -219,6 +224,8 @@
                                     <td class="admin-review-comment">{{ $report->reportComment?: '—' }}</td>
                                     <td>{{ $report->user?->username ?? 'Unknown user' }}</td>
                                     <td>{{ $report->is_resolved ? '✅ Resolved' : '🟠 Open' }}</td>
+                                    <td>{{ $report->resolvedBy?->username ?? '—' }}</td>
+                                    <td>{{ $report->resolved_at?->format('M d, Y H:i') ?? '—' }}</td>
                                     <td>
                                         @if ($report->is_resolved)
                                             <button type="button" class="delete-report-btn" data-report-id="{{ $report->id }}">Delete review</button>
@@ -226,24 +233,27 @@
                                             <button type="button" class="resolve-report-btn" data-report-id="{{ $report->id }}">Mark handled</button>
                                             <button type="button" class="delete-court-btn" data-court-id="{{ $report->court->id }}">Delete court</button>
                                         @endif
-                                        <a
-                                            href="{{ route('map') }}?court={{ $court->id }}"
-                                            style="display: inline-block; color: #6b736e; font-size: 0.85rem; margin-top: 4px; cursor: pointer; text-decoration: none;">
-                                            🗺️See on map
-                                        </a>
+                                        @if ($report->court)
+                                            <a
+                                                href="{{ route('map') }}?court={{ $report->court->id }}"
+                                                style="display: inline-block; color: #6b736e; font-size: 0.85rem; margin-top: 4px; cursor: pointer; text-decoration: none;">
+                                                🗺️See on map
+                                            </a>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="admin-empty-state">No reports yet.</td>
+                                    <td colspan="9" class="admin-empty-state">No reports yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+                <x-admin-pagination :paginator="$reports" />
             </section>
             <section class="admin-panel">
-                <div class="admin-panel-header">Review Reports ({{ $reviewReports->where('is_resolved', false)->count() }} open)</div>
+                <div class="admin-panel-header">Review Reports ({{ $openReviewReportCount }} open)</div>
                 <div class="admin-table-wrap">
                     <table class="admin-table admin-table-reports">
                         <thead>
@@ -254,6 +264,8 @@
                                 <th>Details</th>
                                 <th>Reported by</th>
                                 <th>Status</th>
+                                <th>Resolved by</th>
+                                <th>Resolved at</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -274,6 +286,8 @@
                                     <td class="admin-review-comment">{{ $report->reportComment ?: '—' }}</td>
                                     <td>{{ $report->user?->username ?? 'Unknown user' }}</td>
                                     <td>{{ $report->is_resolved ? '✅ Resolved' : '🟠 Open' }}</td>
+                                    <td>{{ $report->resolvedBy?->username ?? '—' }}</td>
+                                    <td>{{ $report->resolved_at?->format('M d, Y H:i') ?? '—' }}</td>
                                     <td>
                                         @if ($report->is_resolved)
                                             <button type="button" class="delete-review-report-btn" data-report-id="{{ $report->id }}">Delete</button>
@@ -285,12 +299,13 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="admin-empty-state">No review reports yet.</td>
+                                    <td colspan="9" class="admin-empty-state">No review reports yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+                <x-admin-pagination :paginator="$reviewReports" />
             </section>
         </div>
     </div>
@@ -629,7 +644,7 @@
                 const formData = new FormData(form);
 
                 fetch(`/admin/courts/${courtId}`, {
-                    method: 'PUT',
+                    method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json'

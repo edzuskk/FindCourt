@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'findcourt_admin' => [
+        'email' => env('FINDCOURT_ADMIN_EMAIL'),
+        'password' => env('FINDCOURT_ADMIN_PASSWORD'),
+        'username' => env('FINDCOURT_ADMIN_USERNAME', 'Admin'),
+    ],
+
 ];

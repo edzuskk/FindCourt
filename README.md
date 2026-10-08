@@ -1,58 +1,154 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# FindCourt 🏀
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Projekta apraksts
 
-## About Laravel
+**FindCourt** ir tīmekļa vietne, kas paredzēta basketbola cienītājiem, lai palīdzētu atrast basketbola laukumus Latvijā un uzzināt informāciju par tiem.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Lietotāji var apskatīt basketbola laukumus interaktīvā kartē, meklēt sev piemērotāko laukumu un apskatīt citu lietotāju pievienoto informāciju. Reģistrētie lietotāji var pievienot jaunus basketbola laukumus, norādot to atrašanās vietu, nosaukumu, adresi, aprakstu un pievienojot attēlu.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Katram basketbola laukumam lietotāji var pievienot komentārus, attēlus un vērtējumus no 1 līdz 5 zvaigznēm. Tāpat iespējams izteikt savu viedokli par laukumu, nospiežot pogu **Like** vai **Dislike**.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Lietotāji var saglabāt sev interesējošos basketbola laukumus, lai vēlāk tos viegli atrastu savā profilā. Profilā iespējams pārvaldīt saglabātos un paša pievienotos laukumus, kā arī rediģēt savu profila informāciju.
 
-## Learning Laravel
+Tīmekļa vietnē ir pieejama arī iespēja ziņot par neatbilstošiem basketbola laukumiem un komentāriem. Administratoram ir iespēja pārvaldīt pievienotos laukumus, lietotāju atsauksmes un saņemtos ziņojumus.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## Galvenās funkcijas
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Basketbola laukumu apskatīšana interaktīvā kartē.
+- Jaunu basketbola laukumu pievienošana.
+- Basketbola laukumu meklēšana un filtrēšana.
+- Komentāru, attēlu un vērtējumu pievienošana.
+- Reakciju **Like** un **Dislike** pievienošana laukumiem.
+- Basketbola laukumu saglabāšana lietotāja profilā.
+- Savu pievienoto laukumu un atsauksmju pārvaldība.
+- Lietotāja reģistrācija, autorizācija un profila rediģēšana.
+- Ziņošana par neatbilstošiem laukumiem un komentāriem.
+- Administratora panelis laukumu, atsauksmju un ziņojumu pārvaldībai.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Izmantotās tehnoloģijas
 
-## Agentic Development
+- **PHP** – servera puses programmēšanas valoda.
+- **Laravel** – tīmekļa vietnes izstrādes ietvars.
+- **MySQL** – datubāze lietotāju, laukumu un atsauksmju glabāšanai.
+- **JavaScript** – interaktīvo funkciju nodrošināšanai.
+- **HTML un CSS** – tīmekļa vietnes struktūrai un dizainam.
+- **Laravel Blade** – dinamisku tīmekļa lapu veidošanai.
+- **Leaflet** – interaktīvās kartes attēlošanai.
+- **OpenStreetMap** – kartes datu attēlošanai.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Projekta mērķis
+
+Projekta mērķis ir izveidot ērtu un pārskatāmu tīmekļa vietni, kurā basketbola cienītāji var atrast tuvākos basketbola laukumus, apskatīt to attēlus, iepazīties ar citu lietotāju atsauksmēm un dalīties savā pieredzē.
+
+FindCourt palīdz lietotājiem atrast piemērotu basketbola laukumu arī nepazīstamā pilsētā vai vietā, kur nav zināma laukumu atrašanās vieta.
+
+## Kā uzstādit projektu un palaist to
+
+### 1. Projekta lejupielāde
+
+Atveriet termināli un lejupielādējiet projektu no GitHub:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/edzuskk/FindCourt
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Pārejiet uz projekta mapi laragon terminālā:
 
-## Contributing
+```bash
+cd FindCourt
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 2. Nepieciešamo bibliotēku instalēšana
 
-## Code of Conduct
+Instalējiet Laravel projekta atkarības:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+composer install
+```
 
-## Security Vulnerabilities
+Ja projektā tiek izmantotas npm pakotnes, instalējiet tās:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+npm install
+```
 
-## License
+### 3. Vides konfigurēšana
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Izveidojiet `.env` failu, nokopējot `.env.example`:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Ģenerējiet Laravel lietotnes atslēgu:
+
+```bash
+php artisan key:generate
+```
+
+### 4. Datubāzes konfigurēšana
+
+Izveidojiet MySQL datubāzi ar nosaukumu `FindCourt`.
+
+Atveriet `.env` failu un norādiet savus datubāzes savienojuma datus:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=FindCourt
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+**Piezīme:** `DB_USERNAME` un `DB_PASSWORD` jānorāda atbilstoši savai MySQL konfigurācijai.
+
+Ja vēlaties izveidot administratoru ar datubāzes sējēju, `.env` failā iestatiet unikālu administratora e-pastu un drošu paroli:
+
+```env
+FINDCOURT_ADMIN_EMAIL=admin@example.com
+FINDCOURT_ADMIN_PASSWORD=your-secure-password
+FINDCOURT_ADMIN_USERNAME=Admin
+```
+
+Pēc tam izpildiet `php artisan db:seed`. Ja administratora e-pasts vai parole nav konfigurēta, administrators netiek izveidots. Sējēju var palaist atkārtoti; tas nemaina esošā administratora paroli.
+
+### 5. Datubāzes migrāciju izpilde
+
+Lai izveidotu nepieciešamās datubāzes tabulas, izpildiet:
+
+```bash
+php artisan migrate
+```
+
+Laukumu koordinātu migrācija pārbauda, vai datubāzē jau nav precīzu koordinātu dublikātu. Ja tādi ir, migrācija apstājas, nedzēšot ierakstus; pirms atkārtotas palaišanas dublikāti ir jāpārskata un jāatrisina.
+
+### 6. Attēlu glabāšanas konfigurēšana
+
+Lai tīmekļa vietnē tiktu attēloti lietotāju augšupielādētie attēli, izveidojiet simbolisko saiti:
+
+```bash
+php artisan storage:link
+```
+
+### 7. Tīmekļa vietnes palaišana
+
+Palaidiet Laravel izstrādes serveri:
+
+```bash
+php artisan serve
+```
+
+Izstrādes laikā Vite aktīvi apkalpo priekšgala resursus; atveriet otru termināli un izpildiet:
+
+```bash
+npm run dev
+```
+
+Lai izveidotu optimizētu priekšgala versiju, izmantojiet `npm run build`.
+
+Pēc servera palaišanas atveriet pārlūkprogrammu un ievadiet adresi:
+
+http://127.0.0.1:8000
+
+Viss izdarīts!
