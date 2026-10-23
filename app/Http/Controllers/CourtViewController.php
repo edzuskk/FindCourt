@@ -9,13 +9,13 @@ class CourtViewController extends Controller
 {
     public function show(Request $request, Court $court)
     {
-        $court->load(['reviews' => fn ($query) => $query->with('user')->latest()]);
+        $reviews = $court->reviews()->with('user')->latest()->paginate(10);
 
-        $reviews = $court->reviews->map(function ($review) {
+        $reviews->getCollection()->transform(function ($review) {
             return (object) [
                 'id' => $review->id,
                 'is_owner' => auth()->id() === $review->user_id,
-                'username' => $review->username ?? ($review->user?->username ?? 'Unknown user'),
+                'username' => $review->user?->username ?? ($review->username ?? 'Unknown user'),
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'photo' => $review->photo,

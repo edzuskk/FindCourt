@@ -17,33 +17,82 @@ class MarkerController extends Controller
 
     public function index(Request $request)
     {
-        $courts = Court::query()
-            ->withCount('reviews')
-            ->withAvg('reviews', 'rating')
-            ->get();
-        $savedCourtIds = Auth::check()
-            ? array_fill_keys(Auth::user()->savedCourts()->pluck('courts.id')->all(), true)
-            : [];
-
-        $courts->transform(function ($court) {
-            $court->avg_rating = $court->rating ?? $court->reviews_avg_rating ?? 0;
-
-            return $court;
-        });
-
-        $courts->each(function ($court) use ($savedCourtIds) {
-            $court->is_saved = isset($savedCourtIds[$court->id]);
-        });
-
         if ($request->expectsJson() || $request->is('courts')) {
+            $bounds = $request->validate([
+                'south' => ['nullable', 'numeric', 'between:-90,90', 'required_with:north,west,east'],
+                'north' => ['nullable', 'numeric', 'between:-90,90', 'required_with:south,west,east'],
+                'west' => ['nullable', 'numeric', 'between:-180,180', 'required_with:south,north,east'],
+                'east' => ['nullable', 'numeric', 'between:-180,180', 'required_with:south,north,west'],
+                'court_id' => ['nullable', 'integer', 'min:1'],
+            ]);
+
+            if (isset($bounds['south'], $bounds['north'], $bounds['west'], $bounds['east'])) {
+                abort_if($bounds['south'] > $bounds['north'] || $bounds['west'] > $bounds['east'], 422);
+            }
+
+            $courtQuery = Court::query()
+                ->with('user:id,username')
+                ->withCount('reviews')
+                ->withAvg('reviews', 'rating');
+
+            if (isset($bounds['south'], $bounds['north'], $bounds['west'], $bounds['east'])) {
+                $courtQuery
+                    ->whereBetween('latitude', [$bounds['south'], $bounds['north']])
+                    ->whereBetween('longitude', [$bounds['west'], $bounds['east']]);
+            }
+
+            $courts = $courtQuery->latest()->limit(500)->get();
+
+            if (isset($bounds['court_id']) && ! $courts->contains('id', (int) $bounds['court_id'])) {
+                $requestedCourt = Court::query()
+                    ->with('user:id,username')
+                    ->withCount('reviews')
+                    ->withAvg('reviews', 'rating')
+                    ->find($bounds['court_id']);
+
+                if ($requestedCourt !== null) {
+                    $courts->push($requestedCourt);
+                }
+            }
+
+            $savedCourtIds = Auth::check()
+                ? array_fill_keys(Auth::user()->savedCourts()->whereIn('courts.id', $courts->modelKeys())->pluck('courts.id')->all(), true)
+                : [];
+
+            $courts->transform(function ($court) {
+                $court->username = $court->user?->username ?? ($court->username ?? 'Unknown user');
+                $court->avg_rating = $court->rating ?? $court->reviews_avg_rating ?? 0;
+
+                return $court;
+            });
+
+            $courts->each(function ($court) use ($savedCourtIds) {
+                $court->is_saved = isset($savedCourtIds[$court->id]);
+            });
+
             return response()->json($courts);
         }
+
+        $courts = Court::query()
+            ->select(['city', 'state'])
+            ->whereNotNull('city')
+            ->orWhereNotNull('state')
+            ->distinct()
+            ->get();
 
         return view('map', compact('courts'));
     }
 
     public function store(Request $request)
     {
+        foreach (['latitude', 'longitude'] as $coordinate) {
+            $value = $request->input($coordinate);
+
+            if (is_numeric($value)) {
+                $request->merge([$coordinate => round((float) $value, 8)]);
+            }
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string', 'max:255'],

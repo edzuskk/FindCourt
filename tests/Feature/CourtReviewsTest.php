@@ -89,6 +89,86 @@ class CourtReviewsTest extends TestCase
         $this->assertDatabaseCount('courts', 1);
     }
 
+    public function test_court_creation_normalizes_coordinates_before_duplicate_validation(): void
+    {
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+        $courtData = [
+            'name' => 'Neighborhood Court',
+            'address' => '1 Main St',
+            'city' => 'Riga',
+            'state' => 'Latvia',
+            'rating' => 5,
+            'description' => 'Outdoor basketball court.',
+            'latitude' => 56.9496,
+            'longitude' => 24.1052,
+        ];
+
+        $this->actingAs($firstUser)->postJson('/courts', $courtData)->assertOk();
+
+        $this->actingAs($secondUser)
+            ->postJson('/courts', [
+                ...$courtData,
+                'latitude' => 56.949600004,
+                'longitude' => 24.105200004,
+            ])
+            ->assertUnprocessable()
+            ->assertInvalid('latitude');
+
+        $this->assertDatabaseCount('courts', 1);
+    }
+
+    public function test_court_map_results_are_limited_to_the_visible_bounds(): void
+    {
+        $visibleCourt = Court::create([
+            'name' => 'Visible Court',
+            'latitude' => 56.9,
+            'longitude' => 24.1,
+        ]);
+        Court::create([
+            'name' => 'Outside Court',
+            'latitude' => 57.5,
+            'longitude' => 25.5,
+        ]);
+
+        $response = $this->getJson('/courts?south=56.8&north=57.0&west=24.0&east=24.2');
+
+        $response->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $visibleCourt->id);
+    }
+
+    public function test_review_endpoint_returns_reviews_in_pages_of_ten(): void
+    {
+        $court = Court::create([
+            'name' => 'Central Court',
+            'latitude' => 56.9496,
+            'longitude' => 24.1052,
+        ]);
+
+        foreach (User::factory()->count(12)->create() as $index => $user) {
+            CourtReview::create([
+                'court_id' => $court->id,
+                'user_id' => $user->id,
+                'username' => $user->username,
+                'rating' => ($index % 5) + 1,
+            ]);
+        }
+
+        $this->getJson("/courts/{$court->id}/reviews")
+            ->assertOk()
+            ->assertJsonCount(10, 'reviews')
+            ->assertJsonPath('court.reviews_count', 12)
+            ->assertJsonPath('has_more', true)
+            ->assertJsonPath('next_page', 2);
+
+        $this->getJson("/courts/{$court->id}/reviews?page=2")
+            ->assertOk()
+            ->assertJsonCount(2, 'reviews')
+            ->assertJsonPath('has_more', false)
+            ->assertJsonPath('next_page', null);
+    }
+
     public function test_court_creation_rejects_coordinates_outside_the_latvia_envelope(): void
     {
         $user = User::factory()->create();

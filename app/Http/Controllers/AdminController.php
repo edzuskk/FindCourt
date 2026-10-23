@@ -7,9 +7,12 @@ use App\Models\CourtReport;
 use App\Models\CourtReview;
 use App\Models\ReviewReport;
 use App\Models\User;
+use App\Services\ImageUploadTransaction;
 
 class AdminController extends Controller
 {
+    public function __construct(private ImageUploadTransaction $imageUploads) {}
+
     public function index()
     {
         $userCount = User::count();
@@ -43,7 +46,7 @@ class AdminController extends Controller
             ->simplePaginate(25, ['*'], 'courtReportsPage');
 
         $reviewReports = ReviewReport::query()
-            ->with(['review:id,username,comment,court_id', 'review.court:id,name', 'user:id,username', 'resolvedBy:id,username'])
+            ->with(['review:id,username,comment,court_id,user_id', 'review.user:id,username', 'review.court:id,name', 'user:id,username', 'resolvedBy:id,username'])
             ->latest()
             ->simplePaginate(25, ['*'], 'reviewReportsPage');
 
@@ -70,7 +73,10 @@ class AdminController extends Controller
             ], 422);
         }
 
-        $user->delete();
+        $this->imageUploads->deleteAfter(
+            fn () => $user->delete(),
+            [$user->photo]
+        );
 
         return response()->json([
             'success' => true,

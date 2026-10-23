@@ -88,6 +88,10 @@ php artisan key:generate
 
 ### 4. Datubāzes konfigurēšana
 
+Projekts atbalsta gan MySQL, gan SQLite. Izvēlieties vienu no tālāk norādītajām konfigurācijām un atbilstoši atjauniniet `.env` failu. `.env.example` pēc noklusējuma izmanto SQLite.
+
+#### MySQL
+
 Izveidojiet MySQL datubāzi ar nosaukumu `FindCourt`.
 
 Atveriet `.env` failu un norādiet savus datubāzes savienojuma datus:
@@ -102,6 +106,23 @@ DB_PASSWORD=
 ```
 
 **Piezīme:** `DB_USERNAME` un `DB_PASSWORD` jānorāda atbilstoši savai MySQL konfigurācijai.
+
+#### SQLite
+
+Izveidojiet SQLite datubāzes failu projekta `database` mapē. PowerShell:
+
+```powershell
+New-Item database/database.sqlite -ItemType File
+```
+
+`.env` failā izmantojiet SQLite savienojumu:
+
+```env
+DB_CONNECTION=sqlite
+DB_DATABASE=database/database.sqlite
+```
+
+SQLite konfigurācijai nav nepieciešams palaists atsevišķs datubāzes serveris vai MySQL lietotājs un parole.
 
 Ja vēlaties izveidot administratoru ar datubāzes sējēju, `.env` failā iestatiet unikālu administratora e-pastu un drošu paroli:
 

@@ -16,6 +16,8 @@
         minZoom: 7,
         maxZoom: 19
         }).setView([56.9630576312498, 24.810031163689104], 8.1);
+        const courtMarkers = L.markerClusterGroup({ chunkedLoading: true });
+        map.addLayer(courtMarkers);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -26,6 +28,7 @@
         const ratingFilter = document.getElementById('ratingFilter');
         const sortFilter = document.getElementById('sortFilter');
         const requestedCourtId = new URLSearchParams(window.location.search).get('court');
+        let requestedCourtFocused = false;
         let allCourts = [];
         let currentSearchTerm = '';
         let currentRatingFilter = 'all';
@@ -179,6 +182,8 @@
                         is_saved: court.is_saved,
                         reviews: reviewData.reviews || [],
                         reviews_count: reviewData.court?.reviews_count ?? reviewData.reviews?.length ?? 0,
+                        reviews_has_more: reviewData.has_more ?? false,
+                        reviews_next_page: reviewData.next_page ?? null,
                         avg_rating: reviewData.court?.avg_rating ?? reviewData.court?.rating ?? court.avg_rating ?? 0
                     }));
                 })
@@ -596,6 +601,8 @@
                                 const refreshedCourt = {
                                     ...reviewData.court,
                                     reviews: reviewData.reviews || [],
+                                    reviews_has_more: reviewData.has_more ?? false,
+                                    reviews_next_page: reviewData.next_page ?? null,
                                     avg_rating: reviewData.court?.rating ?? 0
                                 };
 
@@ -810,6 +817,7 @@
                 <p class="court-description"><strong>📝Description:</strong> ${escapeHtml(court.description || 'No description yet.')}</p>
                 <div class="court-comments-header"><strong>💬Comments:</strong><p>${averageRating > 0 ? ` (${totalReviews} review${totalReviews === 1 ? '' : 's'})` : ''}</p></div>
                 <div class="court-comments">${reviewMarkup}</div>
+                ${court.reviews_has_more ? '<button type="button" class="load-more-reviews-btn">Load more reviews</button>' : ''}
                 <div class="court-review-form-wrap"></div>
                 ${!canAddCourt ? '<p class="sidebar-login-prompt">Please log in or register to post a review and to react.</p>' : ''}
                 ${isAdmin ? `<button type="button" class="edit-court-btn">Edit court</button><button type="button" class="delete-court-btn" data-court-id="${court.id}">Delete court</button>` : ''}
@@ -823,6 +831,29 @@
             const deleteReviewButtons = card.querySelectorAll('.delete-review-btn, .admin-delete-review-btn');
             const editButton = card.querySelector('.edit-court-btn');
             const deleteButton = card.querySelector('.delete-court-btn');
+            const loadMoreReviewsButton = card.querySelector('.load-more-reviews-btn');
+
+            if (loadMoreReviewsButton) {
+                loadMoreReviewsButton.addEventListener('click', function() {
+                    const nextPage = Number(court.reviews_next_page || 2);
+                    fetch(`/courts/${court.id}/reviews?page=${nextPage}`)
+                        .then(response => {
+                            if (!response.ok) throw new Error('Server error: ' + response.status);
+                            return response.json();
+                        })
+                        .then(reviewData => {
+                            showSidebar('Court details', buildCourtCard({
+                                ...court,
+                                ...reviewData.court,
+                                reviews: [...reviews, ...(reviewData.reviews || [])],
+                                reviews_has_more: reviewData.has_more,
+                                reviews_next_page: reviewData.next_page,
+                                reviews_count: reviewData.court?.reviews_count ?? court.reviews_count
+                            }));
+                        })
+                        .catch(error => console.error('Error loading more reviews:', error));
+                });
+            }
 
             if(reportButton) {
                 reportButton.addEventListener('click', function() {
@@ -903,6 +934,8 @@
                                     .then(reviewData => showSidebar('Court details', buildCourtCard({
                                         ...reviewData.court,
                                         reviews: reviewData.reviews || [],
+                                        reviews_has_more: reviewData.has_more ?? false,
+                                        reviews_next_page: reviewData.next_page ?? null,
                                         avg_rating: reviewData.court?.rating ?? 0
                                     })));
                             }
@@ -1034,7 +1067,19 @@
         });
 
         function loadCourts() {
-            fetch('/courts')
+            const bounds = map.getBounds();
+            const params = new URLSearchParams({
+                south: bounds.getSouth(),
+                north: bounds.getNorth(),
+                west: bounds.getWest(),
+                east: bounds.getEast()
+            });
+
+            if (requestedCourtId) {
+                params.set('court_id', requestedCourtId);
+            }
+
+            fetch(`/courts?${params}`)
                 .then(response => {
                     if (!response.ok) throw new Error('Server error: ' + response.status);
                     return response.json();
@@ -1049,24 +1094,22 @@
         }
 
         function renderCourts(courts) {
-            map.eachLayer(layer => {
-                if (layer instanceof L.Marker) {
-                    map.removeLayer(layer);
-                }
-            });
+            courtMarkers.clearLayers();
 
             courts.forEach(court => {
                 const marker = L.marker(
                     [court.latitude, court.longitude],
                     { icon: courtIcon }
-                ).addTo(map);
+                );
+                courtMarkers.addLayer(marker);
 
                 marker.on('click', (event) => {
                     L.DomEvent.stopPropagation(event);
                     showCourtDetails(court);
                 });
 
-                if (requestedCourtId && String(court.id) === requestedCourtId) {
+                if (requestedCourtId && !requestedCourtFocused && String(court.id) === requestedCourtId) {
+                    requestedCourtFocused = true;
                     map.setView([court.latitude, court.longitude], Math.max(map.getZoom(), 15));
                     showCourtDetails(court);
                 }
@@ -1122,5 +1165,6 @@
             marker.bindPopup(popupContent).openPopup();
         });
 
+        map.on('moveend', loadCourts);
         loadCourts();
     

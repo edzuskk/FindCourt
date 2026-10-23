@@ -37,16 +37,6 @@
                 </select>
             </div>
 
-            <div class="rating-filter-wrapper">
-                <label for="stateFilter">State</label>
-                <select id="stateFilter" aria-label="Filter courts by state">
-                    <option value="all">All states</option>
-                    @foreach($courts->pluck('state')->filter()->sort()->unique() as $state)
-                        <option value="{{ $state }}">{{ $state }}</option>
-                    @endforeach
-                </select>
-            </div>
-
             @auth
             <div class="rating-filter-wrapper" style="display: flex; align-items: center; gap: 6px;">
                 <input type="checkbox" id="savedOnlyFilter" aria-label="Only saved courts">
@@ -76,6 +66,9 @@
         <div id="sidebarContent" class="sidebar-body"></div>
     </aside>
 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="{{ asset('map.js') }}"></script>
 </x-layout>

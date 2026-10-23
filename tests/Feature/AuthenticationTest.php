@@ -6,6 +6,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -51,6 +52,23 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
         $this->assertFalse(session()->has('logout_marker'));
         $this->assertNotSame('old-token', session()->token());
+    }
+
+    public function test_password_recovery_uses_the_same_confirmation_for_known_and_unknown_emails(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create(['email' => 'known@example.com']);
+        $confirmation = 'If an account exists for that email address, a password reset link has been sent.';
+
+        $knownResponse = $this->from('/forgot-password')->post('/forgot-password', [
+            'email' => $user->email,
+        ]);
+        $unknownResponse = $this->from('/forgot-password')->post('/forgot-password', [
+            'email' => 'unknown@example.com',
+        ]);
+
+        $knownResponse->assertRedirect('/forgot-password')->assertSessionHas('status', $confirmation);
+        $unknownResponse->assertRedirect('/forgot-password')->assertSessionHas('status', $confirmation);
     }
 
     public function test_admin_seeder_is_idempotent_and_does_not_reset_existing_credentials(): void

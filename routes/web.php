@@ -10,6 +10,7 @@ use App\Http\Controllers\SavedCourtController;
 use App\Http\Controllers\SessionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -72,13 +73,9 @@ Route::post('/forgot-password', function (Request $request) {
         $request->only('email')
     );
 
-    if ($status === Password::RESET_LINK_SENT) {
-        return back()->with('status', 'Password reset link has been sent to your email.');
-    }
+    Log::info('Password reset link request processed.', ['status' => $status]);
 
-    return back()->withErrors([
-        'email' => 'We could not find an account with that email address.',
-    ]);
+    return back()->with('status', 'If an account exists for that email address, a password reset link has been sent.');
 })->middleware('throttle:5,1')->name('password.email');
 
 Route::get('/reset-password/{token}', function (

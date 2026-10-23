@@ -275,7 +275,7 @@
                                     <td>{{ $report->id }}</td>
                                     <td>
                                         @if ($report->review)
-                                            <strong>{{ $report->review->username }}</strong>
+                                            <strong>{{ $report->review->user?->username ?? $report->review->username }}</strong>
                                             — {{ Str::limit($report->review->comment ?? '(no comment)', 60) }}
                                             ({{ $report->review->court?->name ?? 'Deleted court' }})
                                         @else

@@ -17,11 +17,13 @@ class CourtReviewController extends Controller
 
     public function index(Court $court)
     {
-        $reviews = $court->reviews()->with('user')->latest()->get()->map(function ($review) {
+        $reviews = $court->reviews()->with('user')->latest()->paginate(10);
+        $items = $reviews->getCollection()->map(function ($review) {
             return [
                 'id' => $review->id,
                 'is_owner' => Auth::id() === $review->user_id,
-                'username' => $review->username ?? ($review->user?->username ?? 'Unknown user'),
+                'username' => $review->user?->username ?? ($review->username ?? 'Unknown user'),
+                'user_id' => $review->user_id,
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'photo' => $review->photo,
@@ -45,9 +47,11 @@ class CourtReviewController extends Controller
                 'dislikes' => $court->dislikes,
                 'rating' => $court->rating,
                 'avg_rating' => $court->rating,
-                'reviews_count' => $reviews->count(),
+                'reviews_count' => $reviews->total(),
             ],
-            'reviews' => $reviews,
+            'reviews' => $items,
+            'has_more' => $reviews->hasMorePages(),
+            'next_page' => $reviews->hasMorePages() ? $reviews->currentPage() + 1 : null,
         ]);
     }
 
@@ -92,7 +96,7 @@ class CourtReviewController extends Controller
             'success' => true,
             'review' => [
                 'id' => $review->id,
-                'username' => $review->username,
+                'username' => $review->user?->username ?? $review->username,
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'photo' => $review->photo,
@@ -139,7 +143,7 @@ class CourtReviewController extends Controller
             'success' => true,
             'review' => [
                 'id' => $review->id,
-                'username' => $review->username,
+                'username' => $review->user?->username ?? $review->username,
                 'rating' => $review->rating,
                 'comment' => $review->comment,
                 'photo' => $review->photo,

@@ -22,7 +22,7 @@
 
             <p class="court-description"><strong>📝 Description:</strong> {{ $court->description ?? 'No description yet.' }}</p>
 
-            <div class="court-comments-header"><strong>💬 Comments ({{ $reviews->count() }})</strong></div>
+            <div class="court-comments-header"><strong>💬 Comments ({{ $reviews->total() }})</strong></div>
 
             <div class="court-comments">
                 @forelse($reviews as $review)
@@ -41,6 +41,8 @@
                     <p class="empty-note">No comments yet.</p>
                 @endforelse
             </div>
+
+            {{ $reviews->links() }}
         </div>
     </main>
 </x-layout>

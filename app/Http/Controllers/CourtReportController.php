@@ -90,11 +90,17 @@ class CourtReportController extends Controller
 
     public function resolveReviewReport(ReviewReport $report): JsonResponse
     {
-        $report->update([
-            'is_resolved' => true,
-            'resolved_by' => Auth::id(),
-            'resolved_at' => now(),
-        ]);
+        DB::transaction(function () use ($report): void {
+            $lockedReport = ReviewReport::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! $lockedReport->is_resolved) {
+                $lockedReport->update([
+                    'is_resolved' => true,
+                    'resolved_by' => Auth::id(),
+                    'resolved_at' => now(),
+                ]);
+            }
+        });
 
         return response()->json(['success' => true]);
     }
@@ -108,11 +114,17 @@ class CourtReportController extends Controller
 
     public function resolve(CourtReport $report): JsonResponse
     {
-        $report->update([
-            'is_resolved' => true,
-            'resolved_by' => Auth::id(),
-            'resolved_at' => now(),
-        ]);
+        DB::transaction(function () use ($report): void {
+            $lockedReport = CourtReport::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! $lockedReport->is_resolved) {
+                $lockedReport->update([
+                    'is_resolved' => true,
+                    'resolved_by' => Auth::id(),
+                    'resolved_at' => now(),
+                ]);
+            }
+        });
 
         return response()->json(['success' => true]);
     }

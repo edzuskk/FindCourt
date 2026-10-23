@@ -75,6 +75,25 @@ class ReportModerationTest extends TestCase
             $this->assertSame($admin->id, $report->resolvedBy->id);
         }
 
+        $initialResolutions = [
+            $courtReport->fresh()->resolved_at->toDateTimeString(),
+            $reviewReport->fresh()->resolved_at->toDateTimeString(),
+        ];
+        $secondAdmin = User::factory()->create(['is_admin' => true]);
+        $this->travel(1)->day();
+
+        $this->actingAs($secondAdmin)
+            ->patchJson("/admin/reports/{$courtReport->id}")
+            ->assertOk();
+        $this->actingAs($secondAdmin)
+            ->patchJson("/admin/review-reports/{$reviewReport->id}")
+            ->assertOk();
+
+        $this->assertSame($admin->id, $courtReport->fresh()->resolved_by);
+        $this->assertSame($admin->id, $reviewReport->fresh()->resolved_by);
+        $this->assertSame($initialResolutions[0], $courtReport->fresh()->resolved_at->toDateTimeString());
+        $this->assertSame($initialResolutions[1], $reviewReport->fresh()->resolved_at->toDateTimeString());
+
         $this->actingAs($admin)
             ->get('/admin')
             ->assertOk()
@@ -114,5 +133,35 @@ class ReportModerationTest extends TestCase
 
         $this->assertDatabaseCount('court_reports', 1);
         $this->assertDatabaseCount('review_reports', 1);
+    }
+
+    public function test_review_report_displays_the_reviewers_current_username(): void
+    {
+        $reviewer = User::factory()->create(['username' => 'OriginalName']);
+        $reporter = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $court = Court::create([
+            'name' => 'Central Court',
+            'latitude' => 56.9496,
+            'longitude' => 24.1052,
+        ]);
+        $review = CourtReview::create([
+            'court_id' => $court->id,
+            'user_id' => $reviewer->id,
+            'username' => 'OriginalName',
+            'rating' => 4,
+        ]);
+        ReviewReport::create([
+            'review_id' => $review->id,
+            'user_id' => $reporter->id,
+            'reportReason' => 'spam',
+        ]);
+        $reviewer->update(['username' => 'CurrentName']);
+
+        $this->actingAs($admin)
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('CurrentName')
+            ->assertDontSee('OriginalName');
     }
 }
